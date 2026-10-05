@@ -37,16 +37,18 @@ constexpr const char* LINKEDIN_FOUNDER = "https://www.linkedin.com/in/abdul-muha
 constexpr const char* IG_COMPANY = "https://instagram.com/the_technostic";
 constexpr const char* IG_FOUNDER = "https://instagram.com/jker24256";
 
+// RFC 6350-compatible line endings and explicit field types improve
+// compatibility with Android/iOS contact importers.
 constexpr const char* VCARD =
-  "BEGIN:VCARD\n"
-  "VERSION:3.0\n"
-  "FN:Abdul Muhaymin Nawaz\n"
-  "ORG:The Technostic Group\n"
-  "TITLE:Founder & CTO\n"
-  "TEL:+917439008165\n"
-  "EMAIL:abdul@technosticsgroup.com\n"
-  "URL:https://technosticsgroup.com\n"
-  "END:VCARD";
+  "BEGIN:VCARD\r\n"
+  "VERSION:3.0\r\n"
+  "FN:Abdul Muhaymin Nawaz\r\n"
+  "ORG:The Technostic Group\r\n"
+  "TITLE:Founder & CTO\r\n"
+  "TEL;TYPE=CELL:+917439008165\r\n"
+  "EMAIL;TYPE=INTERNET:abdul@technosticsgroup.com\r\n"
+  "URL:https://technosticsgroup.com\r\n"
+  "END:VCARD\r\n";
 
 enum Screen {
   BOOT, WELCOME, MENU, QR_WEB, QR_VCARD, QR_LINKEDIN_COMPANY, QR_LINKEDIN_FOUNDER,
