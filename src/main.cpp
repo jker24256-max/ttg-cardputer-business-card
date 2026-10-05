@@ -32,7 +32,7 @@ constexpr const char* WEBSITE = "https://technosticsgroup.com";
 constexpr const char* WEBSITE_SHORT = "technosticsgroup.com";
 constexpr const char* EMAIL = "abdul@technosticsgroup.com";
 constexpr const char* PHONE = "+917439008165";
-constexpr const char* LINKEDIN = "https://www.linkedin.com/in/technostics-group";
+constexpr const char* LINKEDIN = "https://www.linkedin.com/in/abdul-muhaymin-nawaz-6a3a043b3";
 constexpr const char* IG_COMPANY = "https://instagram.com/the_technostic";
 constexpr const char* IG_FOUNDER = "https://instagram.com/jker24256";
 
@@ -147,8 +147,6 @@ void wrapText(const String& text, int x, int y, int maxWidth, int lineHeight = 1
 // -----------------------------------------------------------------------------
 
 void drawQR(const char* payload, int version = 8) {
-  // Version 8 comfortably accommodates the vCard while keeping modules
-  // readable on the 240x135 display.
   QRCode qr;
   uint8_t data[qrcode_getBufferSize(8)];
   qrcode_initText(&qr, data, version, ECC_MEDIUM, payload);
@@ -170,16 +168,16 @@ void drawQR(const char* payload, int version = 8) {
   }
 }
 
+// -----------------------------------------------------------------------------
+// Screens
+// -----------------------------------------------------------------------------
+
 void qrScreen(const char* title, const char* payload, const char* sub) {
   clear();
   header(title);
   drawQR(payload, 8);
   centered(sub, 129, GOLD2, 1);
 }
-
-// -----------------------------------------------------------------------------
-// Screens
-// -----------------------------------------------------------------------------
 
 void drawBoot() {
   clear();
@@ -228,7 +226,7 @@ void drawMenu() {
     M5Cardputer.Display.setTextDatum(middle_left);
     M5Cardputer.Display.drawString(String(i + 1) + "  " + menuItems[i], 9, y);
   }
-  footer("UP/DOWN MOVE   ENTER SELECT");
+  footer("ARROWS MOVE   ENTER SELECT");
 }
 
 void drawContact() {
@@ -382,12 +380,14 @@ void handleKeys() {
   }
 
   if (screen == MENU) {
-    if (st.up) {
+    // All four physical arrow keys navigate the menu.
+    // Up/Left = previous item, Down/Right = next item.
+    if (st.up || st.left) {
       menuIndex = (menuIndex + MENU_COUNT - 1) % MENU_COUNT;
       render();
       return;
     }
-    if (st.down) {
+    if (st.down || st.right) {
       menuIndex = (menuIndex + 1) % MENU_COUNT;
       render();
       return;
