@@ -16,3 +16,13 @@ jobs:
 
       - name: PlatformIO build
         run: pio run
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ttg-cardputer-firmware
+          path: |
+            .pio/build/m5stack-cardputer-adv/firmware.bin
+            .pio/build/m5stack-cardputer-adv/firmware.elf
+          if-no-files-found: error
+          retention-days: 30
