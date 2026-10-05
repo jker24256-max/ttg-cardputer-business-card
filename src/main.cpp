@@ -1,0 +1,459 @@
+#include <Arduino.h>
+#include <ctype.h>
+#include <M5Cardputer.h>
+#include <qrcode.h>
+
+// -----------------------------------------------------------------------------
+// TTG DIGITAL BUSINESS CARD — M5Stack Cardputer-Adv
+// -----------------------------------------------------------------------------
+
+namespace TTG {
+
+// Display
+constexpr int W = 240;
+constexpr int H = 135;
+
+// Palette
+constexpr uint16_t NAVY   = 0x0127;
+constexpr uint16_t NAVY2  = 0x020F;
+constexpr uint16_t GOLD   = 0xFEA0;
+constexpr uint16_t GOLD2  = 0xD68A;
+constexpr uint16_t WHITE  = 0xFFFF;
+constexpr uint16_t MUTED  = 0xB5B6;
+constexpr uint16_t LINE   = 0x3A55;
+constexpr uint16_t BLACK  = 0x0000;
+
+// Business identity
+constexpr const char* NAME = "Abdul Muhaymin Nawaz";
+constexpr const char* TITLE = "Founder & CTO";
+constexpr const char* COMPANY = "The Technostic Group";
+constexpr const char* TAGLINE = "Praemonitus, Praemunitus";
+constexpr const char* WEBSITE = "https://technosticsgroup.com";
+constexpr const char* WEBSITE_SHORT = "technosticsgroup.com";
+constexpr const char* EMAIL = "abdul@technosticsgroup.com";
+constexpr const char* PHONE = "+917439008165";
+constexpr const char* LINKEDIN = "https://www.linkedin.com/in/technostics-group";
+constexpr const char* IG_COMPANY = "https://instagram.com/the_technostic";
+constexpr const char* IG_FOUNDER = "https://instagram.com/jker24256";
+
+constexpr const char* VCARD =
+  "BEGIN:VCARD\n"
+  "VERSION:3.0\n"
+  "FN:Abdul Muhaymin Nawaz\n"
+  "ORG:The Technostic Group\n"
+  "TITLE:Founder & CTO\n"
+  "TEL:+917439008165\n"
+  "EMAIL:abdul@technosticsgroup.com\n"
+  "URL:https://technosticsgroup.com\n"
+  "END:VCARD";
+
+enum Screen {
+  BOOT, WELCOME, MENU, QR_WEB, QR_VCARD, QR_LINKEDIN,
+  QR_IG_COMPANY, QR_IG_FOUNDER, CONTACT, WEBSITE_PAGE,
+  LINKEDIN_PAGE, INSTAGRAM_PAGE, ABOUT, PHILOSOPHY, EXIT
+};
+
+Screen screen = BOOT;
+int menuIndex = 0;
+unsigned long bootStarted = 0;
+bool firstFrame = true;
+
+// -----------------------------------------------------------------------------
+// Drawing helpers
+// -----------------------------------------------------------------------------
+
+void clear() {
+  M5Cardputer.Display.fillScreen(NAVY);
+}
+
+void header(const char* label) {
+  M5Cardputer.Display.fillRect(0, 0, W, 20, NAVY2);
+  M5Cardputer.Display.drawFastHLine(0, 19, W, LINE);
+  M5Cardputer.Display.setTextColor(GOLD);
+  M5Cardputer.Display.setTextDatum(middle_left);
+  M5Cardputer.Display.setTextSize(1);
+  M5Cardputer.Display.drawString("TTG", 7, 10);
+  M5Cardputer.Display.setTextColor(MUTED);
+  M5Cardputer.Display.drawString(label, 34, 10);
+}
+
+void footer(const char* text = "ESC/X BACK") {
+  M5Cardputer.Display.drawFastHLine(0, 122, W, LINE);
+  M5Cardputer.Display.setTextDatum(middle_center);
+  M5Cardputer.Display.setTextColor(MUTED);
+  M5Cardputer.Display.setTextSize(1);
+  M5Cardputer.Display.drawString(text, W / 2, 129);
+}
+
+void crest(int cx, int cy, int s = 28) {
+  // Compact heraldic TT mark. Kept vector-based so the firmware has no
+  // external image asset and remains fully offline.
+  int r = s / 2;
+  M5Cardputer.Display.drawRect(cx - r, cy - r, s, s, GOLD);
+  M5Cardputer.Display.drawRect(cx - r + 3, cy - r + 3, s - 6, s - 6, GOLD2);
+  M5Cardputer.Display.drawLine(cx - r + 6, cy - r + 7, cx, cy + r - 5, GOLD);
+  M5Cardputer.Display.drawLine(cx + r - 6, cy - r + 7, cx, cy + r - 5, GOLD);
+  M5Cardputer.Display.drawFastVLine(cx, cy - r + 7, s - 12, GOLD);
+  M5Cardputer.Display.drawFastHLine(cx - r + 7, cy, s - 14, GOLD);
+  M5Cardputer.Display.setTextDatum(middle_center);
+  M5Cardputer.Display.setTextColor(GOLD);
+  M5Cardputer.Display.setTextSize(1);
+  M5Cardputer.Display.drawString("T", cx, cy + 1);
+}
+
+void centered(const String& text, int y, uint16_t color = WHITE, int size = 1) {
+  M5Cardputer.Display.setTextDatum(middle_center);
+  M5Cardputer.Display.setTextColor(color);
+  M5Cardputer.Display.setTextSize(size);
+  M5Cardputer.Display.drawString(text, W / 2, y);
+}
+
+void labelValue(const char* label, const char* value, int y) {
+  M5Cardputer.Display.setTextDatum(middle_left);
+  M5Cardputer.Display.setTextColor(GOLD2);
+  M5Cardputer.Display.drawString(label, 8, y);
+  M5Cardputer.Display.setTextColor(WHITE);
+  M5Cardputer.Display.drawString(value, 72, y);
+}
+
+void wrapText(const String& text, int x, int y, int maxWidth, int lineHeight = 11) {
+  M5Cardputer.Display.setTextDatum(top_left);
+  M5Cardputer.Display.setTextColor(WHITE);
+  M5Cardputer.Display.setTextSize(1);
+
+  String line;
+  int yy = y;
+  int start = 0;
+
+  while (start < text.length()) {
+    int space = text.indexOf(' ', start);
+    if (space < 0) space = text.length();
+    String word = text.substring(start, space);
+    String test = line.length() ? line + " " + word : word;
+    if (M5Cardputer.Display.textWidth(test) > maxWidth && line.length()) {
+      M5Cardputer.Display.drawString(line, x, yy);
+      yy += lineHeight;
+      line = word;
+    } else {
+      line = test;
+    }
+    start = space + 1;
+  }
+  if (line.length()) M5Cardputer.Display.drawString(line, x, yy);
+}
+
+// -----------------------------------------------------------------------------
+// QR
+// -----------------------------------------------------------------------------
+
+void drawQR(const char* payload, int version = 8) {
+  // Version 8 comfortably accommodates the vCard while keeping modules
+  // readable on the 240x135 display.
+  QRCode qr;
+  uint8_t data[qrcode_getBufferSize(8)];
+  qrcode_initText(&qr, data, version, ECC_MEDIUM, payload);
+
+  const int module = 2;
+  const int size = qr.size * module;
+  const int ox = (W - size) / 2;
+  const int oy = 27;
+
+  M5Cardputer.Display.fillRect(ox - 4, oy - 4, size + 8, size + 8, WHITE);
+
+  for (uint8_t y = 0; y < qr.size; ++y) {
+    for (uint8_t x = 0; x < qr.size; ++x) {
+      if (qrcode_getModule(&qr, x, y)) {
+        M5Cardputer.Display.fillRect(
+          ox + x * module, oy + y * module, module, module, BLACK);
+      }
+    }
+  }
+}
+
+void qrScreen(const char* title, const char* payload, const char* sub) {
+  clear();
+  header(title);
+  drawQR(payload, 8);
+  centered(sub, 113, GOLD2, 1);
+  footer();
+}
+
+// -----------------------------------------------------------------------------
+// Screens
+// -----------------------------------------------------------------------------
+
+void drawBoot() {
+  clear();
+  crest(W / 2, 42, 42);
+  centered(COMPANY, 77, GOLD, 1);
+  centered(TAGLINE, 94, MUTED, 1);
+  centered("INITIALIZING", 115, GOLD2, 1);
+}
+
+void drawWelcome() {
+  clear();
+  crest(120, 34, 28);
+  centered(COMPANY, 61, GOLD, 1);
+  centered(NAME, 77, WHITE, 1);
+  centered(TITLE, 91, GOLD2, 1);
+  centered(TAGLINE, 108, MUTED, 1);
+  footer("ENTER SELECT   X BACK");
+}
+
+const char* menuItems[] = {
+  "QR CODE       WEBSITE",
+  "VCARD         SAVE CONTACT",
+  "CONTACT       DETAILS",
+  "WEBSITE       OPEN",
+  "LINKEDIN      PROFILE",
+  "INSTAGRAM     SOCIAL",
+  "ABOUT         COMPANY",
+  "PHILOSOPHY    MOTTO",
+  "EXIT          CLOSE"
+};
+constexpr int MENU_COUNT = sizeof(menuItems) / sizeof(menuItems[0]);
+
+void drawMenu() {
+  clear();
+  header("DIGITAL BUSINESS CARD");
+  centered(NAME, 28, WHITE, 1);
+
+  for (int i = 0; i < MENU_COUNT; ++i) {
+    int y = 42 + i * 9;
+    if (i == menuIndex) {
+      M5Cardputer.Display.fillRoundRect(5, y - 5, 230, 11, 2, GOLD);
+      M5Cardputer.Display.setTextColor(NAVY);
+    } else {
+      M5Cardputer.Display.setTextColor(MUTED);
+    }
+    M5Cardputer.Display.setTextDatum(middle_left);
+    M5Cardputer.Display.drawString(String(i + 1) + "  " + menuItems[i], 9, y);
+  }
+  footer("UP/DOWN MOVE   ENTER SELECT");
+}
+
+void drawContact() {
+  clear();
+  header("CONTACT DETAILS");
+  labelValue("NAME", NAME, 34);
+  labelValue("ROLE", TITLE, 50);
+  labelValue("ORG", COMPANY, 66);
+  labelValue("MAIL", EMAIL, 82);
+  labelValue("TEL", "+91 7439008165", 98);
+  centered(WEBSITE_SHORT, 113, GOLD2, 1);
+  footer();
+}
+
+void drawWebsite() {
+  clear();
+  header("WEBSITE");
+  centered(COMPANY, 39, GOLD, 1);
+  centered(WEBSITE_SHORT, 57, WHITE, 1);
+  centered("SCAN QR CODE", 76, GOLD2, 1);
+  drawQR(WEBSITE, 8);
+  footer();
+}
+
+void drawLinkedInPage() {
+  clear();
+  header("LINKEDIN");
+  centered(COMPANY, 39, GOLD, 1);
+  centered("TECHNOSTICS GROUP", 56, WHITE, 1);
+  centered("SCAN TO CONNECT", 75, GOLD2, 1);
+  drawQR(LINKEDIN, 8);
+  footer();
+}
+
+void drawInstagramPage() {
+  clear();
+  header("INSTAGRAM");
+  M5Cardputer.Display.drawRoundRect(7, 29, 108, 76, 4, LINE);
+  M5Cardputer.Display.drawRoundRect(125, 29, 108, 76, 4, LINE);
+  centered("@the_technostic", 43, GOLD, 1);
+  centered("@jker24256", 61, WHITE, 1);
+  centered("C = COMPANY", 84, MUTED, 1);
+  centered("F = FOUNDER", 98, MUTED, 1);
+  footer("C COMPANY QR   F FOUNDER QR");
+}
+
+void drawAbout() {
+  clear();
+  header("ABOUT THE GROUP");
+  crest(120, 43, 30);
+  centered(COMPANY, 69, GOLD, 1);
+  wrapText(
+    "Technology, security and digital systems built with a disciplined "
+    "focus on resilience, privacy and practical engineering.",
+    10, 82, 220, 10
+  );
+  centered(TAGLINE, 111, GOLD2, 1);
+  footer();
+}
+
+void drawPhilosophy() {
+  clear();
+  header("PHILOSOPHY");
+  centered("PRAEMONITUS", 46, GOLD, 2);
+  centered("PRAEMUNITUS", 66, GOLD, 2);
+  centered("FOREWARNED", 88, WHITE, 1);
+  centered("FOREARMED", 103, WHITE, 1);
+  footer();
+}
+
+void drawExit() {
+  clear();
+  crest(120, 42, 34);
+  centered("THANK YOU", 75, GOLD, 2);
+  centered("CONNECT  |  COLLABORATE", 94, WHITE, 1);
+  centered("BUILD  |  SECURE", 107, MUTED, 1);
+}
+
+void render() {
+  switch (screen) {
+    case BOOT: drawBoot(); break;
+    case WELCOME: drawWelcome(); break;
+    case MENU: drawMenu(); break;
+    case QR_WEB: qrScreen("WEBSITE QR", WEBSITE, WEBSITE_SHORT); break;
+    case QR_VCARD: qrScreen("VCARD QR", VCARD, "SCAN TO SAVE CONTACT"); break;
+    case QR_LINKEDIN: qrScreen("LINKEDIN QR", LINKEDIN, "SCAN TO CONNECT"); break;
+    case QR_IG_COMPANY: qrScreen("COMPANY INSTAGRAM", IG_COMPANY, "@the_technostic"); break;
+    case QR_IG_FOUNDER: qrScreen("FOUNDER INSTAGRAM", IG_FOUNDER, "@jker24256"); break;
+    case CONTACT: drawContact(); break;
+    case WEBSITE_PAGE: drawWebsite(); break;
+    case LINKEDIN_PAGE: drawLinkedInPage(); break;
+    case INSTAGRAM_PAGE: drawInstagramPage(); break;
+    case ABOUT: drawAbout(); break;
+    case PHILOSOPHY: drawPhilosophy(); break;
+    case EXIT: drawExit(); break;
+  }
+  firstFrame = false;
+}
+
+void selectMenu() {
+  switch (menuIndex) {
+    case 0: screen = QR_WEB; break;
+    case 1: screen = QR_VCARD; break;
+    case 2: screen = CONTACT; break;
+    case 3: screen = WEBSITE_PAGE; break;
+    case 4: screen = LINKEDIN_PAGE; break;
+    case 5: screen = INSTAGRAM_PAGE; break;
+    case 6: screen = ABOUT; break;
+    case 7: screen = PHILOSOPHY; break;
+    case 8: screen = EXIT; break;
+  }
+}
+
+void back() {
+  if (screen == MENU || screen == WELCOME) {
+    screen = WELCOME;
+  } else if (screen == EXIT) {
+    screen = MENU;
+  } else {
+    screen = MENU;
+  }
+  render();
+}
+
+void directKey(char key) {
+  switch (tolower((unsigned char)key)) {
+    case 'q': screen = QR_WEB; break;
+    case 'v': screen = QR_VCARD; break;
+    case 'c': screen = CONTACT; break;
+    case 'w': screen = WEBSITE_PAGE; break;
+    case 'l': screen = LINKEDIN_PAGE; break;
+    case 'i': screen = INSTAGRAM_PAGE; break;
+    case 'a': screen = ABOUT; break;
+    case 'p': screen = PHILOSOPHY; break;
+    case 'e': screen = EXIT; break;
+    case 'x': back(); return;
+    default: return;
+  }
+  render();
+}
+
+void handleKeys() {
+  if (!M5Cardputer.Keyboard.isChange()) return;
+  if (!M5Cardputer.Keyboard.isPressed()) return;
+
+  auto st = M5Cardputer.Keyboard.keysState();
+
+  if (st.esc) {
+    back();
+    return;
+  }
+
+  if (screen == WELCOME && st.enter) {
+    screen = MENU;
+    render();
+    return;
+  }
+
+  if (screen == MENU) {
+    if (st.up) {
+      menuIndex = (menuIndex + MENU_COUNT - 1) % MENU_COUNT;
+      render();
+      return;
+    }
+    if (st.down) {
+      menuIndex = (menuIndex + 1) % MENU_COUNT;
+      render();
+      return;
+    }
+    if (st.enter) {
+      selectMenu();
+      render();
+      return;
+    }
+  }
+
+  for (char c : st.word) {
+    if (c == 'x' || c == 'X') {
+      back();
+      return;
+    }
+
+    if (screen == INSTAGRAM_PAGE) {
+      if (c == 'c' || c == 'C') {
+        screen = QR_IG_COMPANY;
+        render();
+        return;
+      }
+      if (c == 'f' || c == 'F') {
+        screen = QR_IG_FOUNDER;
+        render();
+        return;
+      }
+    }
+
+    directKey(c);
+    return;
+  }
+}
+
+} // namespace TTG
+
+void setup() {
+  auto cfg = M5.config();
+  M5Cardputer.begin(cfg, true);
+  M5Cardputer.Display.setRotation(1);
+  M5Cardputer.Display.setTextFont(1);
+  M5Cardputer.Display.setTextSize(1);
+
+  TTG::bootStarted = millis();
+  TTG::render();
+}
+
+void loop() {
+  M5Cardputer.update();
+
+  if (TTG::screen == TTG::BOOT) {
+    if (millis() - TTG::bootStarted > 1800) {
+      TTG::screen = TTG::WELCOME;
+      TTG::render();
+    }
+  } else {
+    TTG::handleKeys();
+  }
+
+  delay(5);
+}
