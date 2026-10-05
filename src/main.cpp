@@ -147,17 +147,31 @@ void wrapText(const String& text, int x, int y, int maxWidth, int lineHeight = 1
 // QR
 // -----------------------------------------------------------------------------
 
-void drawQR(const char* payload, int version = 8) {
+bool drawQR(const char* payload, int version = 8, uint8_t ecc = ECC_MEDIUM) {
   QRCode qr;
-  uint8_t data[qrcode_getBufferSize(8)];
-  qrcode_initText(&qr, data, version, ECC_MEDIUM, payload);
 
+  // Allocate the buffer for the actual QR version being rendered.
+  // The old code always allocated a Version-8 buffer, which is incorrect
+  // when a larger/smaller version is requested.
+  uint8_t data[qrcode_getBufferSize(version)];
+
+  if (qrcode_initText(&qr, data, version, ecc, payload) != 0) {
+    return false;
+  }
+
+  // Keep a proper quiet zone around the QR. Four modules is the standard
+  // minimum and makes camera/Lens detection considerably more reliable.
   const int module = 2;
+  const int quiet = 4 * module;
   const int size = qr.size * module;
-  const int ox = (W - size) / 2;
-  const int oy = 27;
+  const int total = size + quiet * 2;
 
-  M5Cardputer.Display.fillRect(ox - 4, oy - 4, size + 8, size + 8, WHITE);
+  // QR screens have no footer so the largest practical QR can use the
+  // complete 240x135 display.
+  const int ox = (W - size) / 2;
+  const int oy = (H - total) / 2 + quiet;
+
+  M5Cardputer.Display.fillRect(ox - quiet, oy - quiet, total, total, WHITE);
 
   for (uint8_t y = 0; y < qr.size; ++y) {
     for (uint8_t x = 0; x < qr.size; ++x) {
@@ -167,6 +181,8 @@ void drawQR(const char* payload, int version = 8) {
       }
     }
   }
+
+  return true;
 }
 
 // -----------------------------------------------------------------------------
@@ -176,7 +192,18 @@ void drawQR(const char* payload, int version = 8) {
 void qrScreen(const char* title, const char* payload, const char* sub) {
   clear();
   header(title);
-  drawQR(payload, 8);
+
+  // The vCard is much larger than the URL/social payloads. Version 9 with
+  // low error correction provides enough byte capacity while still fitting
+  // on the 240x135 display at 2 pixels per module.
+  if (screen == QR_VCARD) {
+    if (!drawQR(payload, 9, ECC_LOW)) {
+      centered("VCARD QR ERROR", 68, GOLD, 1);
+    }
+    return;
+  }
+
+  drawQR(payload, 8, ECC_MEDIUM);
   centered(sub, 129, GOLD2, 1);
 }
 
