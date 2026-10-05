@@ -8,10 +8,11 @@ Premium offline digital business card firmware for the **M5Stack Cardputer-Adv**
 - Boot / welcome / menu / about / philosophy / exit screens
 - Website QR
 - vCard QR for saving Abdul Muhaymin Nawaz's contact
-- LinkedIn QR
+- Personal LinkedIn QR
 - Company + founder Instagram QR codes
 - Contact and company information
 - Keyboard-first navigation
+- Full four-way arrow-key menu navigation
 - Works offline; Wi-Fi is not required for the card itself
 - Centralized business identity constants
 - PlatformIO build configuration
@@ -26,7 +27,7 @@ Praemonitus, Praemunitus
 Website: https://technosticsgroup.com  
 Email: abdul@technosticsgroup.com  
 Phone: +91 7439008165  
-LinkedIn: https://www.linkedin.com/in/technostics-group  
+LinkedIn: https://www.linkedin.com/in/abdul-muhaymin-nawaz-6a3a043b3  
 Company Instagram: https://instagram.com/the_technostic  
 Founder Instagram: https://instagram.com/jker24256
 
@@ -44,7 +45,8 @@ Founder Instagram: https://instagram.com/jker24256
 | P | Philosophy |
 | E | Exit |
 | Enter | Select menu item |
-| Up / Down | Move |
+| Up / Left | Previous menu item |
+| Down / Right | Next menu item |
 | Esc / X | Back |
 
 ## Build
