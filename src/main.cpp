@@ -32,7 +32,8 @@ constexpr const char* WEBSITE = "https://technosticsgroup.com";
 constexpr const char* WEBSITE_SHORT = "technosticsgroup.com";
 constexpr const char* EMAIL = "abdul@technosticsgroup.com";
 constexpr const char* PHONE = "+917439008165";
-constexpr const char* LINKEDIN = "https://www.linkedin.com/in/abdul-muhaymin-nawaz-6a3a043b3";
+constexpr const char* LINKEDIN_COMPANY = "https://www.linkedin.com/in/technostics-group";
+constexpr const char* LINKEDIN_FOUNDER = "https://www.linkedin.com/in/abdul-muhaymin-nawaz-6a3a043b3";
 constexpr const char* IG_COMPANY = "https://instagram.com/the_technostic";
 constexpr const char* IG_FOUNDER = "https://instagram.com/jker24256";
 
@@ -48,7 +49,7 @@ constexpr const char* VCARD =
   "END:VCARD";
 
 enum Screen {
-  BOOT, WELCOME, MENU, QR_WEB, QR_VCARD, QR_LINKEDIN,
+  BOOT, WELCOME, MENU, QR_WEB, QR_VCARD, QR_LINKEDIN_COMPANY, QR_LINKEDIN_FOUNDER,
   QR_IG_COMPANY, QR_IG_FOUNDER, CONTACT, WEBSITE_PAGE,
   LINKEDIN_PAGE, INSTAGRAM_PAGE, ABOUT, PHILOSOPHY, EXIT
 };
@@ -251,8 +252,13 @@ void drawWebsite() {
 void drawLinkedInPage() {
   clear();
   header("LINKEDIN");
-  drawQR(LINKEDIN, 4);
-  centered("SCAN TO CONNECT", 129, GOLD2, 1);
+  M5Cardputer.Display.drawRoundRect(7, 29, 108, 76, 4, LINE);
+  M5Cardputer.Display.drawRoundRect(125, 29, 108, 76, 4, LINE);
+  centered("COMPANY", 43, GOLD, 1);
+  centered("FOUNDER", 61, WHITE, 1);
+  centered("C = COMPANY", 84, MUTED, 1);
+  centered("F = FOUNDER", 98, MUTED, 1);
+  footer("C COMPANY QR   F FOUNDER QR");
 }
 
 void drawInstagramPage() {
@@ -306,7 +312,8 @@ void render() {
     case MENU: drawMenu(); break;
     case QR_WEB: qrScreen("WEBSITE QR", WEBSITE, WEBSITE_SHORT); break;
     case QR_VCARD: qrScreen("VCARD QR", VCARD, "SCAN TO SAVE CONTACT"); break;
-    case QR_LINKEDIN: qrScreen("LINKEDIN QR", LINKEDIN, "SCAN TO CONNECT"); break;
+    case QR_LINKEDIN_COMPANY: qrScreen("COMPANY LINKEDIN", LINKEDIN_COMPANY, "The Technostic Group"); break;
+    case QR_LINKEDIN_FOUNDER: qrScreen("FOUNDER LINKEDIN", LINKEDIN_FOUNDER, "Abdul Muhaymin Nawaz"); break;
     case QR_IG_COMPANY: qrScreen("COMPANY INSTAGRAM", IG_COMPANY, "@the_technostic"); break;
     case QR_IG_FOUNDER: qrScreen("FOUNDER INSTAGRAM", IG_FOUNDER, "@jker24256"); break;
     case CONTACT: drawContact(); break;
@@ -403,6 +410,19 @@ void handleKeys() {
     if (c == 'x' || c == 'X') {
       back();
       return;
+    }
+
+    if (screen == LINKEDIN_PAGE) {
+      if (c == 'c' || c == 'C') {
+        screen = QR_LINKEDIN_COMPANY;
+        render();
+        return;
+      }
+      if (c == 'f' || c == 'F') {
+        screen = QR_LINKEDIN_FOUNDER;
+        render();
+        return;
+      }
     }
 
     if (screen == INSTAGRAM_PAGE) {
