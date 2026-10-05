@@ -174,8 +174,7 @@ void qrScreen(const char* title, const char* payload, const char* sub) {
   clear();
   header(title);
   drawQR(payload, 8);
-  centered(sub, 113, GOLD2, 1);
-  footer();
+  centered(sub, 129, GOLD2, 1);
 }
 
 // -----------------------------------------------------------------------------
@@ -247,21 +246,15 @@ void drawContact() {
 void drawWebsite() {
   clear();
   header("WEBSITE");
-  centered(COMPANY, 39, GOLD, 1);
-  centered(WEBSITE_SHORT, 57, WHITE, 1);
-  centered("SCAN QR CODE", 76, GOLD2, 1);
-  drawQR(WEBSITE, 8);
-  footer();
+  drawQR(WEBSITE, 4);
+  centered("SCAN TO VISIT", 129, GOLD2, 1);
 }
 
 void drawLinkedInPage() {
   clear();
   header("LINKEDIN");
-  centered(COMPANY, 39, GOLD, 1);
-  centered("TECHNOSTICS GROUP", 56, WHITE, 1);
-  centered("SCAN TO CONNECT", 75, GOLD2, 1);
-  drawQR(LINKEDIN, 8);
-  footer();
+  drawQR(LINKEDIN, 4);
+  centered("SCAN TO CONNECT", 129, GOLD2, 1);
 }
 
 void drawInstagramPage() {
