@@ -39,16 +39,10 @@ constexpr const char* IG_FOUNDER = "https://instagram.com/jker24256";
 
 // RFC 6350-compatible line endings and explicit field types improve
 // compatibility with Android/iOS contact importers.
-constexpr const char* VCARD =
-  "BEGIN:VCARD\r\n"
-  "VERSION:3.0\r\n"
-  "FN:Abdul Muhaymin Nawaz\r\n"
-  "ORG:The Technostic Group\r\n"
-  "TITLE:Founder & CTO\r\n"
-  "TEL;TYPE=CELL:+917439008165\r\n"
-  "EMAIL;TYPE=INTERNET:abdul@technosticsgroup.com\r\n"
-  "URL:https://technosticsgroup.com\r\n"
-  "END:VCARD\r\n";
+// The QR formerly contained a vCard. It now contains ONLY the direct PDF URL.
+// Host the supplied PDF at this exact path on technosticsgroup.com.
+constexpr const char* CARD_PDF_URL =
+  "https://technosticsgroup.com/TTG_Business_Card_Founder_CTO.pdf";
 
 enum Screen {
   BOOT, WELCOME, MENU, QR_WEB, QR_VCARD, QR_LINKEDIN_COMPANY, QR_LINKEDIN_FOUNDER,
@@ -59,7 +53,41 @@ enum Screen {
 Screen screen = BOOT;
 int menuIndex = 0;
 unsigned long bootStarted = 0;
+unsigned long lastActivity = 0;
 bool firstFrame = true;
+
+// After 60 seconds with no interaction, enter ESP32 light sleep.
+// The Cardputer-Adv display is put to sleep as part of the power-save path,
+// protecting the TFT from sitting on the same frame indefinitely.
+// Wake with the top G0/user button.
+constexpr unsigned long SLEEP_TIMEOUT_MS = 60000;
+
+// -----------------------------------------------------------------------------
+// Power / idle handling
+// -----------------------------------------------------------------------------
+
+void resetIdleTimer() {
+  lastActivity = millis();
+}
+
+void wakeDisplay() {
+  M5Cardputer.Display.wakeup();
+  M5Cardputer.Display.powerSaveOn();
+}
+
+void enterIdleSleep() {
+  // M5Unified's lightSleep() turns the display off and suspends the ESP32
+  // until its wake source is asserted. With no timer, it stays asleep until
+  // the top G0/user button wakes it.
+  M5Cardputer.Display.sleep();
+  M5Cardputer.Display.powerSave(false);
+  M5Cardputer.Power.lightSleep(0, true);
+
+  // Execution resumes here after wake.
+  wakeDisplay();
+  resetIdleTimer();
+  render();
+}
 
 // -----------------------------------------------------------------------------
 // Drawing helpers
@@ -195,16 +223,8 @@ void qrScreen(const char* title, const char* payload, const char* sub) {
   clear();
   header(title);
 
-  // The vCard is much larger than the URL/social payloads. Version 9 with
-  // low error correction provides enough byte capacity while still fitting
-  // on the 240x135 display at 2 pixels per module.
-  if (screen == QR_VCARD) {
-    if (!drawQR(payload, 9, ECC_LOW)) {
-      centered("VCARD QR ERROR", 68, GOLD, 1);
-    }
-    return;
-  }
-
+  // The business-card QR now contains only the PDF URL, so it can use the
+  // same compact, high-reliability QR settings as the other web URLs.
   drawQR(payload, 8, ECC_MEDIUM);
   centered(sub, 129, GOLD2, 1);
 }
@@ -340,7 +360,7 @@ void render() {
     case WELCOME: drawWelcome(); break;
     case MENU: drawMenu(); break;
     case QR_WEB: qrScreen("WEBSITE QR", WEBSITE, WEBSITE_SHORT); break;
-    case QR_VCARD: qrScreen("VCARD QR", VCARD, "SCAN TO SAVE CONTACT"); break;
+    case QR_VCARD: qrScreen("BUSINESS CARD PDF", CARD_PDF_URL, "SCAN TO OPEN PDF"); break;
     case QR_LINKEDIN_COMPANY: qrScreen("COMPANY LINKEDIN", LINKEDIN_COMPANY, "The Technostic Group"); break;
     case QR_LINKEDIN_FOUNDER: qrScreen("FOUNDER LINKEDIN", LINKEDIN_FOUNDER, "Abdul Muhaymin Nawaz"); break;
     case QR_IG_COMPANY: qrScreen("COMPANY INSTAGRAM", IG_COMPANY, "@the_technostic"); break;
@@ -402,6 +422,7 @@ void handleKeys() {
   if (!M5Cardputer.Keyboard.isChange()) return;
   if (!M5Cardputer.Keyboard.isPressed()) return;
 
+  resetIdleTimer();
   auto st = M5Cardputer.Keyboard.keysState();
 
   if (st.esc) {
@@ -482,6 +503,7 @@ void setup() {
   M5Cardputer.Display.setTextSize(1);
 
   TTG::bootStarted = millis();
+  TTG::lastActivity = millis();
   TTG::render();
 }
 
@@ -491,10 +513,15 @@ void loop() {
   if (TTG::screen == TTG::BOOT) {
     if (millis() - TTG::bootStarted > 1800) {
       TTG::screen = TTG::WELCOME;
+      TTG::resetIdleTimer();
       TTG::render();
     }
   } else {
     TTG::handleKeys();
+
+    if (millis() - TTG::lastActivity >= TTG::SLEEP_TIMEOUT_MS) {
+      TTG::enterIdleSleep();
+    }
   }
 
   delay(5);
