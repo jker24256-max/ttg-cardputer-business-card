@@ -7,7 +7,7 @@ Premium offline digital business card firmware for the **M5Stack Cardputer-Adv**
 - Midnight navy + gold TTG visual identity
 - Boot / welcome / menu / about / philosophy / exit screens
 - Website QR
-- vCard QR for saving Abdul Muhaymin Nawaz's contact
+- business-card PDF QR for saving Abdul Muhaymin Nawaz's contact
 - Company + personal LinkedIn QR codes
 - Company + founder Instagram QR codes
 - Contact and company information
@@ -37,7 +37,7 @@ Founder Instagram: https://instagram.com/jker24256
 | Key | Action |
 |---|---|
 | Q | Website QR |
-| V | vCard QR |
+| V | BUSINESS CARD PDF QR |
 | C | Contact |
 | W | Website |
 | L | LinkedIn (company/founder) |
@@ -68,3 +68,17 @@ For the first upload, put the Cardputer-Adv into USB download mode if required b
 - ricmoo/QRCode
 
 The QR generator is used as an external dependency rather than copied into this repository.
+
+
+### Power saving
+
+- Automatically enters ESP32 light sleep after 60 seconds without keyboard interaction.
+- The display is put into panel sleep to avoid leaving a static image on the TFT indefinitely.
+- Wake the Cardputer-Adv with the top G0/user button.
+
+### Business-card PDF QR
+
+The **V** / business-card QR contains only this direct PDF URL:
+`https://technosticsgroup.com/TTG_Business_Card_Founder_CTO.pdf`
+
+The PDF must be hosted at that exact path on the Technostic Group website for the QR to open it.
