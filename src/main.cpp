@@ -66,6 +66,8 @@ constexpr unsigned long SLEEP_TIMEOUT_MS = 60000;
 // Power / idle handling
 // -----------------------------------------------------------------------------
 
+void render();
+
 void resetIdleTimer() {
   lastActivity = millis();
 }
