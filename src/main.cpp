@@ -71,6 +71,8 @@ constexpr unsigned long SLEEP_TIMEOUT_MS = 60000;
 // -----------------------------------------------------------------------------
 void render();
 void resetIdleTimer();
+void startMusic();
+void stopMusic();
 
 void applySettings() {
   M5Cardputer.Display.setBrightness(brightnessValue);
