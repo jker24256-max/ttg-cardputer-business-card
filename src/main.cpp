@@ -122,7 +122,7 @@ void technicalBackground() {
   for (int i = 0; i < 2; ++i) {
     M5Cardputer.Display.drawFastHLine(12, ys[i], 48, 0x1830);
     M5Cardputer.Display.drawFastHLine(60, ys[i], 22, 0x1830);
-    M5Cardputer.Display.drawFastVLine(60, ys[i], i == 0 ? 12 : -12, 0x1830);
+    M5Cardputer.Display.drawFastVLine(60, i == 0 ? ys[i] : ys[i] - 12, 12, 0x1830);
     M5Cardputer.Display.fillCircle(60, ys[i], 1, GOLD2);
   }
   M5Cardputer.Display.drawFastHLine(183, 31, 38, 0x1830);
@@ -485,8 +485,11 @@ void drawLinkedInPage() {
   linkedInIcon(180, 56);
   M5Cardputer.Display.drawRoundRect(7, 29, 108, 76, 4, LINE);
   M5Cardputer.Display.drawRoundRect(125, 29, 108, 76, 4, LINE);
-  centered("COMPANY", 84, GOLD, 1);
-  centered("FOUNDER", 84, WHITE, 1);
+  M5Cardputer.Display.setTextDatum(middle_center);
+  M5Cardputer.Display.setTextColor(GOLD);
+  M5Cardputer.Display.drawString("COMPANY", 60, 84);
+  M5Cardputer.Display.setTextColor(WHITE);
+  M5Cardputer.Display.drawString("FOUNDER", 180, 84);
   centered("C = COMPANY", 84, MUTED, 1);
   centered("F = FOUNDER", 98, MUTED, 1);
   footer("C COMPANY QR   F FOUNDER QR");
@@ -499,8 +502,11 @@ void drawInstagramPage() {
   instagramIcon(180, 56);
   M5Cardputer.Display.drawRoundRect(7, 29, 108, 76, 4, LINE);
   M5Cardputer.Display.drawRoundRect(125, 29, 108, 76, 4, LINE);
-  centered("@the_technostic", 84, GOLD, 1);
-  centered("@jker24256", 84, WHITE, 1);
+  M5Cardputer.Display.setTextDatum(middle_center);
+  M5Cardputer.Display.setTextColor(GOLD);
+  M5Cardputer.Display.drawString("@the_technostic", 60, 84);
+  M5Cardputer.Display.setTextColor(WHITE);
+  M5Cardputer.Display.drawString("@jker24256", 180, 84);
   centered("C = COMPANY", 84, MUTED, 1);
   centered("F = FOUNDER", 98, MUTED, 1);
   footer("C COMPANY QR   F FOUNDER QR");
