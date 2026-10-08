@@ -59,7 +59,7 @@ bool firstFrame = true;
 bool displayAsleep = false;
 int settingsIndex = 0;
 uint8_t brightnessValue = 180;
-uint8_t volumeValue = 96;
+constexpr uint8_t MUSIC_VOLUME = 96;
 Preferences prefs;
 
 // After 60 seconds with no interaction, sleep ONLY the TFT.
@@ -76,12 +76,12 @@ void stopMusic();
 
 void applySettings() {
   M5Cardputer.Display.setBrightness(brightnessValue);
-  M5Cardputer.Speaker.setVolume(volumeValue);
+  // Music volume is fixed; there is intentionally no user volume setting.
+  M5Cardputer.Speaker.setVolume(MUSIC_VOLUME);
 }
 
 void saveSettings() {
   prefs.putUChar("brightness", brightnessValue);
-  prefs.putUChar("volume", volumeValue);
 }
 
 void wakeDisplayOnly() {
@@ -120,7 +120,6 @@ void stopMusic() {
 }
 
 void startMusic() {
-  if (volumeValue == 0) return;
   musicEnabled = true;
   musicStep = 0;
   musicNextStep = 0;
@@ -329,7 +328,7 @@ const char* menuItems[] = {
   "INSTAGRAM      SOCIAL",
   "ABOUT          COMPANY",
   "PHILOSOPHY     MOTTO",
-  "SETTINGS       DISPLAY/AUDIO",
+  "SETTINGS       DISPLAY",
   "EXIT           CLOSE"
 };
 constexpr int MENU_COUNT = sizeof(menuItems) / sizeof(menuItems[0]);
@@ -421,11 +420,11 @@ void drawSettings() {
   clear();
   header("SETTINGS");
 
-  const char* labels[] = {"BRIGHTNESS", "VOLUME"};
-  const int values[] = {brightnessValue, volumeValue};
+  const char* labels[] = {"BRIGHTNESS"};
+  const int values[] = {brightnessValue};
 
-  for (int i = 0; i < 2; ++i) {
-    int y = 47 + i * 38;
+  for (int i = 0; i < 1; ++i) {
+    int y = 58;
     if (i == settingsIndex) {
       M5Cardputer.Display.fillRoundRect(8, y - 14, 224, 29, 4, GOLD);
       M5Cardputer.Display.setTextColor(NAVY);
@@ -451,7 +450,7 @@ void drawSettings() {
     M5Cardputer.Display.drawString(String(values[i]), 220, y - 3);
   }
 
-  footer("UP/DOWN SELECT   LEFT/RIGHT ADJUST");
+  footer("LEFT/RIGHT ADJUST   ESC/X BACK");
 }
 
 void drawExit() {
@@ -553,29 +552,11 @@ void handleKeys() {
   }
 
   if (screen == SETTINGS) {
-    if (st.up) {
-      settingsIndex = (settingsIndex + 1) % 2;
-      render();
-      return;
-    }
-    if (st.down) {
-      settingsIndex = (settingsIndex + 1) % 2;
-      render();
-      return;
-    }
     if (st.left || st.right) {
       int delta = st.right ? 16 : -16;
-      int value = (settingsIndex == 0) ? brightnessValue : volumeValue;
-      value = constrain(value + delta, 0, 255);
-      if (settingsIndex == 0) brightnessValue = value;
-      else volumeValue = value;
+      brightnessValue = constrain((int)brightnessValue + delta, 0, 255);
       applySettings();
       saveSettings();
-      render();
-      return;
-    }
-    if (st.enter) {
-      settingsIndex = (settingsIndex + 1) % 2;
       render();
       return;
     }
@@ -649,7 +630,6 @@ void setup() {
 
   TTG::prefs.begin("ttg", false);
   TTG::brightnessValue = TTG::prefs.getUChar("brightness", 180);
-  TTG::volumeValue = TTG::prefs.getUChar("volume", 96);
   TTG::applySettings();
 
   TTG::bootStarted = millis();
