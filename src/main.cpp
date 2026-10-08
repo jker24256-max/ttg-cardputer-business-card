@@ -62,6 +62,8 @@ uint8_t brightnessValue = 180;
 String secretBuffer;
 Preferences prefs;
 unsigned long lastBootFrame = 0;
+int bootLastReveal = -1;
+int bootLastProgress = -1;
 
 // After 60 seconds with no interaction, sleep ONLY the TFT.
 // The ESP32, keyboard and application remain active so a key wakes the screen.
@@ -375,23 +377,52 @@ void qrScreen(const char* title, const char* payload, const char* sub) {
 }
 
 void drawBoot() {
-  clear();
   const unsigned long elapsed = millis() - bootStarted;
-  int reveal = min(42, 8 + (int)(elapsed / 45));
-  crest(W / 2, 42, reveal);
+  const int reveal = min(42, 8 + (int)(elapsed / 55));
+  const int progress = min(120, (int)((elapsed * 120UL) / 1800UL));
 
-  centered(COMPANY, 77, GOLD, 1);
-  centered(TAGLINE, 94, MUTED, 1);
+  // Draw the static boot frame only once. Subsequent frames update only
+  // the animated regions, avoiding the full-screen redraw/flicker.
+  if (bootLastReveal < 0) {
+    clear();
+    centered(COMPANY, 77, GOLD, 1);
+    centered(TAGLINE, 94, MUTED, 1);
+    M5Cardputer.Display.drawRect(60, 122, 120, 4, LINE);
+    bootLastReveal = 0;
+    bootLastProgress = 0;
+  }
 
-  const char* status = elapsed < 450 ? "LOADING PROFILE" :
-                       elapsed < 900 ? "VERIFYING IDENTITY" :
-                       elapsed < 1300 ? "SYSTEM READY" : "WELCOME";
-  centered(status, 112, GOLD2, 1);
+  // Erase only the crest area, then redraw it at the new size.
+  if (reveal != bootLastReveal) {
+    M5Cardputer.Display.fillRect(91, 8, 58, 69, NAVY);
+    crest(W / 2, 42, reveal);
+    bootLastReveal = reveal;
+  }
 
-  int barW = 120;
-  int progress = min(barW, (int)((elapsed * barW) / 1700));
-  M5Cardputer.Display.drawRect(60, 122, barW, 4, LINE);
-  if (progress > 0) M5Cardputer.Display.fillRect(60, 122, progress, 4, GOLD);
+  // Update only the status text when it changes.
+  static int lastStatus = -1;
+  int status = elapsed < 450 ? 0 :
+               elapsed < 900 ? 1 :
+               elapsed < 1300 ? 2 : 3;
+  if (status != lastStatus) {
+    M5Cardputer.Display.fillRect(55, 101, 130, 15, NAVY);
+    const char* text = status == 0 ? "LOADING PROFILE" :
+                       status == 1 ? "VERIFYING IDENTITY" :
+                       status == 2 ? "SYSTEM READY" : "WELCOME";
+    centered(text, 112, GOLD2, 1);
+    lastStatus = status;
+  }
+
+  if (progress != bootLastProgress) {
+    if (progress > bootLastProgress) {
+      M5Cardputer.Display.fillRect(60 + bootLastProgress, 122,
+                                   progress - bootLastProgress, 4, GOLD);
+    } else {
+      M5Cardputer.Display.fillRect(60, 122, 120, 4, LINE);
+      M5Cardputer.Display.fillRect(60, 122, progress, 4, GOLD);
+    }
+    bootLastProgress = progress;
+  }
 }
 
 void drawWelcome() {
@@ -591,7 +622,7 @@ void drawExit() {
   centered("BUILD  |  SECURE", 107, MUTED, 1);
 }
 
-void render() {
+void drawCurrentScreen() {
   switch (screen) {
     case BOOT: drawBoot(); break;
     case WELCOME: drawWelcome(); break;
@@ -612,33 +643,10 @@ void render() {
     case EXIT: drawExit(); break;
     case EASTER_EGG: drawEasterEgg(); break;
   }
+}
 
-  // Short horizontal scan transition on normal UI screens.
-  const bool qr = (screen == QR_WEB || screen == QR_VCARD ||
-                   screen == QR_LINKEDIN_COMPANY || screen == QR_LINKEDIN_FOUNDER ||
-                   screen == QR_IG_COMPANY || screen == QR_IG_FOUNDER);
-  if (!qr && screen != BOOT) {
-    for (int x = 0; x < W; x += 40) {
-      M5Cardputer.Display.fillRect(x, 0, 20, H, NAVY2);
-      delay(7);
-      M5Cardputer.Display.fillRect(x, 0, 20, H, NAVY);
-    }
-    // Redraw clean frame after the sweep.
-    switch (screen) {
-      case WELCOME: drawWelcome(); break;
-      case MENU: drawMenu(); break;
-      case CONTACT: drawContact(); break;
-      case WEBSITE_PAGE: drawWebsite(); break;
-      case LINKEDIN_PAGE: drawLinkedInPage(); break;
-      case INSTAGRAM_PAGE: drawInstagramPage(); break;
-      case ABOUT: drawAbout(); break;
-      case PHILOSOPHY: drawPhilosophy(); break;
-      case SETTINGS: drawSettings(); break;
-      case EXIT: drawExit(); break;
-      case EASTER_EGG: drawEasterEgg(); break;
-      default: break;
-    }
-  }
+void render() {
+  drawCurrentScreen();
   firstFrame = false;
 }
 
@@ -804,6 +812,8 @@ void setup() {
   TTG::applySettings();
 
   TTG::bootStarted = millis();
+  TTG::bootLastReveal = -1;
+  TTG::bootLastProgress = -1;
   TTG::lastActivity = millis();
   TTG::render();
   TTG::resetIdleTimer();
