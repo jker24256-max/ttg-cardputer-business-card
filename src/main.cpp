@@ -62,10 +62,8 @@ uint8_t brightnessValue = 180;
 uint8_t volumeValue = 96;
 Preferences prefs;
 
-// After 60 seconds with no interaction, enter ESP32 light sleep.
-// The Cardputer-Adv display is put to sleep as part of the power-save path,
-// protecting the TFT from sitting on the same frame indefinitely.
-// Wake with the top G0/user button.
+// After 60 seconds with no interaction, sleep ONLY the TFT.
+// The ESP32, keyboard and application remain active so a key wakes the screen.
 constexpr unsigned long SLEEP_TIMEOUT_MS = 60000;
 
 // -----------------------------------------------------------------------------
@@ -318,10 +316,7 @@ void drawContact() {
 }
 
 void drawWebsite() {
-  clear();
-  header("WEBSITE");
-  drawQR(WEBSITE, 4);
-  centered("SCAN TO VISIT", 129, GOLD2, 1);
+  qrScreen("WEBSITE QR", WEBSITE, WEBSITE_SHORT);
 }
 
 void drawLinkedInPage() {
