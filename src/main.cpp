@@ -545,16 +545,19 @@ void drawInstagramPage() {
 
 void drawAbout() {
   clear();
-  header("ABOUT THE GROUP");
-  crest(120, 43, 30);
-  centered(COMPANY, 69, GOLD, 1);
-  wrapText(
-    "Technology, security and digital systems built with a disciplined "
-    "focus on resilience, privacy and practical engineering.",
-    10, 82, 220, 10
-  );
-  centered(TAGLINE, 111, GOLD2, 1);
-  footer();
+  header("ABOUT");
+  crest(120, 43, 24);
+  centered(COMPANY, 68, GOLD, 1);
+
+  // Tighter, deliberate text block so it never collides with the footer.
+  M5Cardputer.Display.setTextDatum(middle_center);
+  M5Cardputer.Display.setTextColor(WHITE);
+  M5Cardputer.Display.setTextSize(1);
+  centered("Technology, security and digital", 82, WHITE, 1);
+  centered("systems built with a disciplined", 92, WHITE, 1);
+  centered("focus on resilience, privacy and", 102, WHITE, 1);
+  centered("practical engineering.", 112, WHITE, 1);
+  footer("ESC/X BACK");
 }
 
 void drawPhilosophy() {
