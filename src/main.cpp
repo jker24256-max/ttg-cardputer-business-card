@@ -71,6 +71,9 @@ constexpr unsigned long SLEEP_TIMEOUT_MS = 60000;
 // -----------------------------------------------------------------------------
 // Power / idle handling
 // -----------------------------------------------------------------------------
+void render();
+void resetIdleTimer();
+
 void applySettings() {
   M5Cardputer.Display.setBrightness(brightnessValue);
   M5Cardputer.Speaker.setVolume(volumeValue);
