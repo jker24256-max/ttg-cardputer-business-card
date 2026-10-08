@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <ctype.h>
+#include <Preferences.h>
 #include <M5Cardputer.h>
 #include <qrcode.h>
 
@@ -47,7 +48,7 @@ constexpr const char* CARD_PDF_URL =
 enum Screen {
   BOOT, WELCOME, MENU, QR_WEB, QR_VCARD, QR_LINKEDIN_COMPANY, QR_LINKEDIN_FOUNDER,
   QR_IG_COMPANY, QR_IG_FOUNDER, CONTACT, WEBSITE_PAGE,
-  LINKEDIN_PAGE, INSTAGRAM_PAGE, ABOUT, PHILOSOPHY, EXIT
+  LINKEDIN_PAGE, INSTAGRAM_PAGE, ABOUT, PHILOSOPHY, SETTINGS, EXIT
 };
 
 Screen screen = BOOT;
@@ -55,6 +56,11 @@ int menuIndex = 0;
 unsigned long bootStarted = 0;
 unsigned long lastActivity = 0;
 bool firstFrame = true;
+bool displayAsleep = false;
+int settingsIndex = 0;
+uint8_t brightnessValue = 180;
+uint8_t volumeValue = 96;
+Preferences prefs;
 
 // After 60 seconds with no interaction, enter ESP32 light sleep.
 // The Cardputer-Adv display is put to sleep as part of the power-save path,
@@ -65,6 +71,45 @@ constexpr unsigned long SLEEP_TIMEOUT_MS = 60000;
 // -----------------------------------------------------------------------------
 // Power / idle handling
 // -----------------------------------------------------------------------------
+void applySettings() {
+  M5Cardputer.Display.setBrightness(brightnessValue);
+  M5Cardputer.Speaker.setVolume(volumeValue);
+}
+
+void saveSettings() {
+  prefs.putUChar("brightness", brightnessValue);
+  prefs.putUChar("volume", volumeValue);
+}
+
+void wakeDisplayOnly() {
+  if (!displayAsleep) return;
+  M5Cardputer.Display.wakeup();
+  M5Cardputer.Display.setBrightness(brightnessValue);
+  displayAsleep = false;
+  resetIdleTimer();
+  render();
+}
+
+void enterDisplaySleep() {
+  // Sleep ONLY the TFT. The ESP32, keyboard, speaker and application remain
+  // running, so a keyboard press can wake the display immediately.
+  M5Cardputer.Display.sleep();
+  displayAsleep = true;
+}
+
+// Original, short TTG phonk-style instrumental motif.
+// It is synthesized locally with the Cardputer speaker; no copyrighted audio
+// file is embedded.
+void playPhonkIntro() {
+  const uint16_t notes[] = {110, 110, 147, 131, 98, 110, 165, 147};
+  const uint16_t lengths[] = {180, 100, 160, 140, 220, 120, 160, 300};
+  for (size_t i = 0; i < 8; ++i) {
+    M5Cardputer.Speaker.tone(notes[i], lengths[i]);
+    delay(lengths[i] + 12);
+  }
+}
+
+// -----------------------------------------------------------------------------
 
 void render();
 
@@ -73,22 +118,7 @@ void resetIdleTimer() {
 }
 
 void wakeDisplay() {
-  M5Cardputer.Display.wakeup();
-  M5Cardputer.Display.powerSaveOn();
-}
-
-void enterIdleSleep() {
-  // M5Unified's lightSleep() turns the display off and suspends the ESP32
-  // until its wake source is asserted. With no timer, it stays asleep until
-  // the top G0/user button wakes it.
-  M5Cardputer.Display.sleep();
-  M5Cardputer.Display.powerSave(false);
-  M5Cardputer.Power.lightSleep(0, true);
-
-  // Execution resumes here after wake.
-  wakeDisplay();
-  resetIdleTimer();
-  render();
+  wakeDisplayOnly();
 }
 
 // -----------------------------------------------------------------------------
@@ -179,30 +209,25 @@ void wrapText(const String& text, int x, int y, int maxWidth, int lineHeight = 1
 // QR
 // -----------------------------------------------------------------------------
 
-bool drawQR(const char* payload, int version = 8, uint8_t ecc = ECC_MEDIUM) {
+bool drawQR(const char* payload, int version = 4, uint8_t ecc = ECC_MEDIUM) {
   QRCode qr;
-
-  // Allocate the buffer for the actual QR version being rendered.
-  // The old code always allocated a Version-8 buffer, which is incorrect
-  // when a larger/smaller version is requested.
   uint8_t data[qrcode_getBufferSize(version)];
 
   if (qrcode_initText(&qr, data, version, ecc, payload) != 0) {
     return false;
   }
 
-  // Keep a proper quiet zone around the QR. Four modules is the standard
-  // minimum and makes camera/Lens detection considerably more reliable.
-  const int module = 2;
+  // Dedicated scan mode: use the entire display and a large module size.
+  // Version 4 is large enough for all TTG URLs used here while allowing
+  // 3x3-pixel modules on the 240x135 panel.
+  const int module = 3;
   const int quiet = 4 * module;
   const int size = qr.size * module;
   const int total = size + quiet * 2;
-
-  // QR screens have no footer so the largest practical QR can use the
-  // complete 240x135 display.
   const int ox = (W - size) / 2;
-  const int oy = (H - total) / 2 + quiet;
+  const int oy = (H - size) / 2;
 
+  M5Cardputer.Display.fillScreen(WHITE);
   M5Cardputer.Display.fillRect(ox - quiet, oy - quiet, total, total, WHITE);
 
   for (uint8_t y = 0; y < qr.size; ++y) {
@@ -213,7 +238,6 @@ bool drawQR(const char* payload, int version = 8, uint8_t ecc = ECC_MEDIUM) {
       }
     }
   }
-
   return true;
 }
 
@@ -222,13 +246,10 @@ bool drawQR(const char* payload, int version = 8, uint8_t ecc = ECC_MEDIUM) {
 // -----------------------------------------------------------------------------
 
 void qrScreen(const char* title, const char* payload, const char* sub) {
-  clear();
-  header(title);
-
-  // The business-card QR now contains only the PDF URL, so it can use the
-  // same compact, high-reliability QR settings as the other web URLs.
-  drawQR(payload, 8, ECC_MEDIUM);
-  centered(sub, 129, GOLD2, 1);
+  (void)title;
+  (void)sub;
+  // Dedicated full-screen scan mode. ESC/X returns to the menu.
+  drawQR(payload, 4, ECC_MEDIUM);
 }
 
 void drawBoot() {
@@ -250,15 +271,15 @@ void drawWelcome() {
 }
 
 const char* menuItems[] = {
-  "QR CODE       WEBSITE",
-  "VCARD         SAVE CONTACT",
-  "CONTACT       DETAILS",
-  "WEBSITE       OPEN",
-  "LINKEDIN      PROFILE",
-  "INSTAGRAM     SOCIAL",
-  "ABOUT         COMPANY",
-  "PHILOSOPHY    MOTTO",
-  "EXIT          CLOSE"
+  "BUSINESS CARD  PDF",
+  "CONTACT        DETAILS",
+  "WEBSITE        OPEN",
+  "LINKEDIN       PROFILE",
+  "INSTAGRAM      SOCIAL",
+  "ABOUT          COMPANY",
+  "PHILOSOPHY     MOTTO",
+  "SETTINGS       DISPLAY/AUDIO",
+  "EXIT           CLOSE"
 };
 constexpr int MENU_COUNT = sizeof(menuItems) / sizeof(menuItems[0]);
 
@@ -348,6 +369,43 @@ void drawPhilosophy() {
   footer();
 }
 
+void drawSettings() {
+  clear();
+  header("SETTINGS");
+
+  const char* labels[] = {"BRIGHTNESS", "VOLUME"};
+  const int values[] = {brightnessValue, volumeValue};
+
+  for (int i = 0; i < 2; ++i) {
+    int y = 47 + i * 38;
+    if (i == settingsIndex) {
+      M5Cardputer.Display.fillRoundRect(8, y - 14, 224, 29, 4, GOLD);
+      M5Cardputer.Display.setTextColor(NAVY);
+    } else {
+      M5Cardputer.Display.drawRoundRect(8, y - 14, 224, 29, 4, LINE);
+      M5Cardputer.Display.setTextColor(MUTED);
+    }
+
+    M5Cardputer.Display.setTextDatum(middle_left);
+    M5Cardputer.Display.drawString(labels[i], 17, y - 3);
+
+    // Compact level bar.
+    int barX = 112;
+    int barW = 82;
+    int filled = (barW * values[i]) / 255;
+    M5Cardputer.Display.drawRect(barX, y - 7, barW, 10, i == settingsIndex ? NAVY : LINE);
+    if (filled > 0) {
+      M5Cardputer.Display.fillRect(barX + 2, y - 5, max(1, filled - 4), 6,
+                                   i == settingsIndex ? NAVY : GOLD);
+    }
+
+    M5Cardputer.Display.setTextDatum(middle_right);
+    M5Cardputer.Display.drawString(String(values[i]), 220, y - 3);
+  }
+
+  footer("UP/DOWN SELECT   LEFT/RIGHT ADJUST");
+}
+
 void drawExit() {
   clear();
   crest(120, 42, 34);
@@ -373,6 +431,7 @@ void render() {
     case INSTAGRAM_PAGE: drawInstagramPage(); break;
     case ABOUT: drawAbout(); break;
     case PHILOSOPHY: drawPhilosophy(); break;
+    case SETTINGS: drawSettings(); break;
     case EXIT: drawExit(); break;
   }
   firstFrame = false;
@@ -380,14 +439,14 @@ void render() {
 
 void selectMenu() {
   switch (menuIndex) {
-    case 0: screen = QR_WEB; break;
-    case 1: screen = QR_VCARD; break;
-    case 2: screen = CONTACT; break;
-    case 3: screen = WEBSITE_PAGE; break;
-    case 4: screen = LINKEDIN_PAGE; break;
-    case 5: screen = INSTAGRAM_PAGE; break;
-    case 6: screen = ABOUT; break;
-    case 7: screen = PHILOSOPHY; break;
+    case 0: screen = QR_VCARD; break;
+    case 1: screen = CONTACT; break;
+    case 2: screen = WEBSITE_PAGE; break;
+    case 3: screen = LINKEDIN_PAGE; break;
+    case 4: screen = INSTAGRAM_PAGE; break;
+    case 5: screen = ABOUT; break;
+    case 6: screen = PHILOSOPHY; break;
+    case 7: screen = SETTINGS; break;
     case 8: screen = EXIT; break;
   }
 }
@@ -413,6 +472,7 @@ void directKey(char key) {
     case 'i': screen = INSTAGRAM_PAGE; break;
     case 'a': screen = ABOUT; break;
     case 'p': screen = PHILOSOPHY; break;
+    case 's': screen = SETTINGS; break;
     case 'e': screen = EXIT; break;
     case 'x': back(); return;
     default: return;
@@ -423,6 +483,11 @@ void directKey(char key) {
 void handleKeys() {
   if (!M5Cardputer.Keyboard.isChange()) return;
   if (!M5Cardputer.Keyboard.isPressed()) return;
+
+  if (displayAsleep) {
+    wakeDisplayOnly();
+    return;
+  }
 
   resetIdleTimer();
   auto st = M5Cardputer.Keyboard.keysState();
@@ -436,6 +501,35 @@ void handleKeys() {
     screen = MENU;
     render();
     return;
+  }
+
+  if (screen == SETTINGS) {
+    if (st.up) {
+      settingsIndex = (settingsIndex + 1) % 2;
+      render();
+      return;
+    }
+    if (st.down) {
+      settingsIndex = (settingsIndex + 1) % 2;
+      render();
+      return;
+    }
+    if (st.left || st.right) {
+      int delta = st.right ? 16 : -16;
+      int value = (settingsIndex == 0) ? brightnessValue : volumeValue;
+      value = constrain(value + delta, 0, 255);
+      if (settingsIndex == 0) brightnessValue = value;
+      else volumeValue = value;
+      applySettings();
+      saveSettings();
+      render();
+      return;
+    }
+    if (st.enter) {
+      settingsIndex = (settingsIndex + 1) % 2;
+      render();
+      return;
+    }
   }
 
   if (screen == MENU) {
@@ -504,9 +598,16 @@ void setup() {
   M5Cardputer.Display.setTextFont(1);
   M5Cardputer.Display.setTextSize(1);
 
+  TTG::prefs.begin("ttg", false);
+  TTG::brightnessValue = TTG::prefs.getUChar("brightness", 180);
+  TTG::volumeValue = TTG::prefs.getUChar("volume", 96);
+  TTG::applySettings();
+
   TTG::bootStarted = millis();
   TTG::lastActivity = millis();
   TTG::render();
+  TTG::playPhonkIntro();
+  TTG::resetIdleTimer();
 }
 
 void loop() {
@@ -521,8 +622,9 @@ void loop() {
   } else {
     TTG::handleKeys();
 
-    if (millis() - TTG::lastActivity >= TTG::SLEEP_TIMEOUT_MS) {
-      TTG::enterIdleSleep();
+    if (!TTG::displayAsleep &&
+        millis() - TTG::lastActivity >= TTG::SLEEP_TIMEOUT_MS) {
+      TTG::enterDisplaySleep();
     }
   }
 
