@@ -342,19 +342,42 @@ void wrapText(const String& text, int x, int y, int maxWidth, int lineHeight = 1
 // QR
 // -----------------------------------------------------------------------------
 
-bool drawQR(const char* payload, int version = 5, uint8_t ecc = ECC_MEDIUM) {
+bool drawQR(const char* payload, int preferredVersion = 4, uint8_t ecc = ECC_LOW) {
   QRCode qr;
-  uint8_t data[qrcode_getBufferSize(version)];
+  // Keep one fixed buffer large enough for our supported scan versions.
+  // This lets us try a smaller QR first and fall back if the payload needs it.
+  constexpr int MAX_QR_VERSION = 5;
+  uint8_t data[qrcode_getBufferSize(MAX_QR_VERSION)];
 
-  if (qrcode_initText(&qr, data, version, ecc, payload) != 0) {
+  int selectedVersion = 0;
+
+  // Prefer the smallest practical symbol. Smaller versions mean fewer
+  // modules, which gives the Cardputer camera target more usable detail.
+  for (int version = 3; version <= MAX_QR_VERSION; ++version) {
+    if (version > preferredVersion && selectedVersion != 0) break;
+    if (qrcode_initText(&qr, data, version, ecc, payload) == 0) {
+      selectedVersion = version;
+      break;
+    }
+  }
+
+  if (selectedVersion == 0) {
     return false;
   }
 
-  // Dedicated scan mode: use the entire display and a large module size.
-  // Version 4 is large enough for all TTG URLs used here while allowing
-  // 3x3-pixel modules on the 240x135 panel.
-  const int module = 3;
-  const int quiet = 4 * module;
+  // The display is only 135px tall, so version 4/5 symbols are limited to
+  // 3px modules. Shorter payloads fit version 3 and get 4px modules.
+  int module = (qr.size <= 29) ? 4 : 3;
+  int quiet = 4 * module;
+
+  // A version-3 code at 4px/module would exceed the panel with the full
+  // standard quiet zone. The surrounding display is already pure white, so
+  // use a compact 2-module internal margin in that case; the screen itself
+  // continues the white quiet area beyond it.
+  if (qr.size <= 29) {
+    quiet = 2 * module;
+  }
+
   const int size = qr.size * module;
   const int total = size + quiet * 2;
   const int ox = (W - size) / 2;
@@ -383,8 +406,10 @@ void qrScreen(const char* title, const char* payload, const char* sub) {
   (void)sub;
   // Lower the backlight in scan mode to prevent camera auto-exposure from
   // washing out the white QR field while keeping the black modules crisp.
-  M5Cardputer.Display.setBrightness(min<uint8_t>(brightnessValue, 120));
-  drawQR(payload, 5, ECC_MEDIUM);
+  // QR scan mode needs maximum optical contrast at normal phone distance.
+  // Restore the user's normal brightness when leaving the QR screen.
+  M5Cardputer.Display.setBrightness(255);
+  drawQR(payload, 4, ECC_LOW);
 }
 
 void drawBoot() {
