@@ -153,38 +153,40 @@ int pageNumber() {
 
 void drawBatteryStatus() {
   int level = M5Cardputer.Power.getBatteryLevel();
-  M5Cardputer.Display.setTextDatum(middle_right);
-  M5Cardputer.Display.setTextColor(MUTED);
-  M5Cardputer.Display.setTextSize(1);
 
-  if (level < 0) {
-    M5Cardputer.Display.drawString("BAT --", W - 7, 10);
-    return;
+  // Compact battery glyph only; keep the 240px header uncluttered.
+  M5Cardputer.Display.drawRect(W - 23, 6, 16, 8, MUTED);
+  M5Cardputer.Display.fillRect(W - 5, 8, 2, 4, MUTED);
+
+  if (level >= 0) {
+    const int fill = constrain((14 * level) / 100, 1, 14);
+    M5Cardputer.Display.fillRect(
+      W - 21, 8, fill, 4, level <= 25 ? GOLD2 : GOLD);
   }
-
-  M5Cardputer.Display.drawRect(W - 37, 6, 22, 8, MUTED);
-  M5Cardputer.Display.fillRect(W - 34, 8, max(1, (16 * level) / 100), 4,
-                               level <= 25 ? GOLD2 : GOLD);
-  M5Cardputer.Display.fillRect(W - 14, 8, 2, 4, MUTED);
-  M5Cardputer.Display.drawString(String(level) + "%", W - 42, 10);
 }
 
 void header(const char* label) {
+  // Clean three-zone header:
+  // TTG identity | section title | page + battery.
   M5Cardputer.Display.fillRect(0, 0, W, 20, NAVY2);
   M5Cardputer.Display.drawFastHLine(0, 19, W, LINE);
-  M5Cardputer.Display.setTextColor(GOLD);
-  M5Cardputer.Display.setTextDatum(middle_left);
+
   M5Cardputer.Display.setTextSize(1);
+  M5Cardputer.Display.setTextDatum(middle_left);
+
+  M5Cardputer.Display.setTextColor(GOLD);
   M5Cardputer.Display.drawString("TTG", 7, 10);
+
   M5Cardputer.Display.setTextColor(MUTED);
-  M5Cardputer.Display.drawString(label, 34, 10);
+  M5Cardputer.Display.drawString(label, 29, 10);
 
   const int p = pageNumber();
   if (p > 0) {
     M5Cardputer.Display.setTextDatum(middle_right);
-    M5Cardputer.Display.drawString(
-      String(p) + "/09", W - 52, 10);
+    M5Cardputer.Display.setTextColor(GOLD2);
+    M5Cardputer.Display.drawString(String(p) + "/09", 204, 10);
   }
+
   drawBatteryStatus();
 }
 
