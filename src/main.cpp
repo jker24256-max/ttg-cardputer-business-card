@@ -58,7 +58,9 @@ unsigned long lastActivity = 0;
 bool firstFrame = true;
 bool displayAsleep = false;
 int settingsIndex = 0;
-uint8_t brightnessValue = 180;
+// 230 is the practical default for the Cardputer-Adv display.
+// Users can still fine-tune it from Settings.
+uint8_t brightnessValue = 230;
 String secretBuffer;
 Preferences prefs;
 unsigned long lastBootFrame = 0;
@@ -506,16 +508,20 @@ void drawContact() {
   clear();
   header("CONTACT");
 
+  // Treat this as a miniature premium credential card rather than a
+  // compressed copy of the physical business card.
+  M5Cardputer.Display.fillRoundRect(8, 30, 224, 82, 5, NAVY2);
   M5Cardputer.Display.drawRoundRect(8, 30, 224, 82, 5, GOLD2);
   M5Cardputer.Display.drawFastVLine(69, 38, 66, LINE);
   crest(39, 61, 29);
 
   M5Cardputer.Display.setTextDatum(middle_left);
   M5Cardputer.Display.setTextColor(GOLD);
-  M5Cardputer.Display.setTextSize(1);
+  M5Cardputer.Display.setTextSize(1.10f);
   M5Cardputer.Display.drawString(NAME, 78, 43);
 
   M5Cardputer.Display.setTextColor(GOLD2);
+  M5Cardputer.Display.setTextSize(1.0f);
   M5Cardputer.Display.drawString(TITLE, 78, 55);
   M5Cardputer.Display.drawFastHLine(78, 63, 140, LINE);
 
@@ -523,9 +529,19 @@ void drawContact() {
   contactIcon(82, 87, 'M');
   contactIcon(82, 100, 'W');
 
-  contactRightText("+91 7439008165", 74, WHITE);
-  contactRightText("abdul@technosticsgroup.com", 87, WHITE, 0.82f);
-  contactRightText("technosticsgroup.com", 100, MUTED, 0.90f);
+  // Left-align the details so the long email remains readable on the
+  // 240px panel instead of being squeezed against the right edge.
+  M5Cardputer.Display.setTextDatum(middle_left);
+  M5Cardputer.Display.setTextColor(WHITE);
+  M5Cardputer.Display.setTextSize(0.95f);
+  M5Cardputer.Display.drawString("+91 7439008165", 94, 74);
+
+  M5Cardputer.Display.setTextSize(0.78f);
+  M5Cardputer.Display.drawString("abdul@technosticsgroup.com", 94, 87);
+
+  M5Cardputer.Display.setTextColor(GOLD2);
+  M5Cardputer.Display.setTextSize(0.90f);
+  M5Cardputer.Display.drawString("technosticsgroup.com", 94, 100);
 
   footer("ESC/X BACK");
 }
@@ -850,7 +866,18 @@ void setup() {
   M5Cardputer.Display.setTextSize(1);
 
   TTG::prefs.begin("ttg", false);
-  TTG::brightnessValue = TTG::prefs.getUChar("brightness", 180);
+
+  // One-time migration for older firmware whose default was 180.
+  // Existing users get the brighter Cardputer profile once, while future
+  // manual brightness changes remain persistent.
+  const bool brightnessV2 = TTG::prefs.getBool("brightness_v2", false);
+  if (!brightnessV2) {
+    TTG::brightnessValue = 230;
+    TTG::prefs.putUChar("brightness", TTG::brightnessValue);
+    TTG::prefs.putBool("brightness_v2", true);
+  } else {
+    TTG::brightnessValue = TTG::prefs.getUChar("brightness", 230);
+  }
   TTG::applySettings();
 
   TTG::bootStarted = millis();
