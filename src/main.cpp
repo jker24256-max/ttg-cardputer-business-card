@@ -568,9 +568,6 @@ void drawLinkedInPage() {
 void drawInstagramPage() {
   clear();
   header("INSTAGRAM");
-  instagramIcon(60, 56void drawInstagramPage() {
-  clear();
-  header("INSTAGRAM");
 
   M5Cardputer.Display.drawRoundRect(8, 29, 106, 76, 5, LINE);
   M5Cardputer.Display.drawRoundRect(126, 29, 106, 76, 5, LINE);
@@ -584,16 +581,21 @@ void drawInstagramPage() {
   centeredAt("F", 179, 96, GOLD2, 1);
 
   footer("C / F   SELECT PROFILE");
-}(COMPANY, 68, GOLD, 1);
+}
+
+void drawAbout() {
+  clear();
+  header("ABOUT");
+
+  crest(24, 43, 20);
+  centered(COMPANY, 68, GOLD, 1);
 
   // Tighter, deliberate text block so it never collides with the footer.
-  M5Cardputer.Display.setTextDatum(middle_center);
-  M5Cardputer.Display.setTextColor(WHITE);
-  M5Cardputer.Display.setTextSize(1);
   centered("Technology, security and digital", 82, WHITE, 1);
   centered("systems built with a disciplined", 92, WHITE, 1);
   centered("focus on resilience, privacy and", 102, WHITE, 1);
   centered("practical engineering.", 112, WHITE, 1);
+
   footer("ESC/X BACK");
 }
 
