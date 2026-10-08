@@ -557,8 +557,9 @@ void drawContact() {
   M5Cardputer.Display.setTextSize(1.05f);
   M5Cardputer.Display.drawString("+91 7439008165", 78, 74);
 
-  M5Cardputer.Display.setTextSize(0.92f);
-  M5Cardputer.Display.drawString("abdul@technosticsgroup.com", 78, 87);
+  // Give the full email address its own safe width so it never clips at the right edge.
+  M5Cardputer.Display.setTextSize(0.80f);
+  M5Cardputer.Display.drawString(EMAIL, 78, 87);
 
   M5Cardputer.Display.setTextColor(GOLD2);
   M5Cardputer.Display.setTextSize(1.00f);
