@@ -470,28 +470,56 @@ void drawMenu() {
   footer("ARROWS MOVE   ENTER SELECT");
 }
 
+void contactIcon(int x, int y, char type) {
+  M5Cardputer.Display.setTextDatum(middle_center);
+  M5Cardputer.Display.setTextColor(GOLD2);
+  M5Cardputer.Display.setTextSize(1);
+  if (type == 'P') {
+    M5Cardputer.Display.drawRoundRect(x - 5, y - 7, 10, 14, 2, GOLD2);
+    M5Cardputer.Display.drawFastHLine(x - 2, y + 4, 4, GOLD2);
+  } else if (type == 'M') {
+    M5Cardputer.Display.drawRect(x - 7, y - 5, 14, 10, GOLD2);
+    M5Cardputer.Display.drawFastHLine(x - 6, y - 4, 6, GOLD2);
+    M5Cardputer.Display.drawFastHLine(x + 6, y - 4, -6, GOLD2);
+  } else {
+    M5Cardputer.Display.drawCircle(x, y, 6, GOLD2);
+    M5Cardputer.Display.drawFastHLine(x - 3, y, 6, GOLD2);
+  }
+}
+
 void drawContact() {
   clear();
-  header("CONTACT DETAILS");
+  header("CONTACT");
 
-  M5Cardputer.Display.drawRoundRect(7, 30, 226, 82, 5, GOLD2);
-  M5Cardputer.Display.drawFastVLine(74, 39, 63, LINE);
-  crest(41, 61, 34);
+  // A compact digital recreation of the physical TTG business card.
+  M5Cardputer.Display.drawRoundRect(8, 30, 224, 82, 5, GOLD2);
+  M5Cardputer.Display.drawFastVLine(70, 38, 66, LINE);
+
+  crest(39, 61, 30);
 
   M5Cardputer.Display.setTextDatum(middle_left);
   M5Cardputer.Display.setTextColor(GOLD);
-  M5Cardputer.Display.drawString(NAME, 84, 43);
+  M5Cardputer.Display.setTextSize(1);
+  M5Cardputer.Display.drawString(NAME, 79, 43);
+
   M5Cardputer.Display.setTextColor(GOLD2);
-  M5Cardputer.Display.drawString(TITLE, 84, 56);
-  M5Cardputer.Display.drawFastHLine(84, 65, 136, LINE);
+  M5Cardputer.Display.drawString(TITLE, 79, 55);
+  M5Cardputer.Display.drawFastHLine(79, 63, 139, LINE);
+
+  contactIcon(83, 74, 'P');
+  contactIcon(83, 87, 'M');
+  contactIcon(83, 100, 'W');
 
   M5Cardputer.Display.setTextColor(WHITE);
-  M5Cardputer.Display.drawString("+91 7439008165", 84, 76);
-  M5Cardputer.Display.drawString("abdul@technosticsgroup.com", 84, 88);
-  M5Cardputer.Display.setTextColor(MUTED);
-  M5Cardputer.Display.drawString("technosticsgroup.com", 84, 100);
+  M5Cardputer.Display.drawString("+91 7439008165", 94, 74);
 
-  footer();
+  // Long strings get a slightly smaller text size to prevent edge collisions.
+  M5Cardputer.Display.setTextSize(1);
+  M5Cardputer.Display.drawString("abdul@technosticsgroup.com", 94, 87);
+  M5Cardputer.Display.setTextColor(MUTED);
+  M5Cardputer.Display.drawString("technosticsgroup.com", 94, 100);
+
+  footer("ESC/X BACK");
 }
 
 void drawWebsite() {
