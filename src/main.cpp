@@ -209,7 +209,7 @@ void wrapText(const String& text, int x, int y, int maxWidth, int lineHeight = 1
 // QR
 // -----------------------------------------------------------------------------
 
-bool drawQR(const char* payload, int version = 4, uint8_t ecc = ECC_MEDIUM) {
+bool drawQR(const char* payload, int version = 5, uint8_t ecc = ECC_MEDIUM) {
   QRCode qr;
   uint8_t data[qrcode_getBufferSize(version)];
 
@@ -249,7 +249,7 @@ void qrScreen(const char* title, const char* payload, const char* sub) {
   (void)title;
   (void)sub;
   // Dedicated full-screen scan mode. ESC/X returns to the menu.
-  drawQR(payload, 4, ECC_MEDIUM);
+  drawQR(payload, 5, ECC_MEDIUM);
 }
 
 void drawBoot() {
