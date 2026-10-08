@@ -288,6 +288,13 @@ void crest(int cx, int cy, int s = 28) {
     }
   }
 }
+void centeredAt(const String& text, int x, int y, uint16_t color = WHITE, float size = 1.0f) {
+  M5Cardputer.Display.setTextDatum(middle_center);
+  M5Cardputer.Display.setTextColor(color);
+  M5Cardputer.Display.setTextSize(size);
+  M5Cardputer.Display.drawString(text, x, y);
+}
+
 void centered(const String& text, int y, uint16_t color = WHITE, int size = 1) {
   M5Cardputer.Display.setTextDatum(middle_center);
   M5Cardputer.Display.setTextColor(color);
@@ -474,50 +481,51 @@ void contactIcon(int x, int y, char type) {
   M5Cardputer.Display.setTextDatum(middle_center);
   M5Cardputer.Display.setTextColor(GOLD2);
   M5Cardputer.Display.setTextSize(1);
+
   if (type == 'P') {
     M5Cardputer.Display.drawRoundRect(x - 5, y - 7, 10, 14, 2, GOLD2);
     M5Cardputer.Display.drawFastHLine(x - 2, y + 4, 4, GOLD2);
   } else if (type == 'M') {
     M5Cardputer.Display.drawRect(x - 7, y - 5, 14, 10, GOLD2);
-    M5Cardputer.Display.drawFastHLine(x - 6, y - 4, 6, GOLD2);
-    M5Cardputer.Display.drawFastHLine(x + 6, y - 4, -6, GOLD2);
+    M5Cardputer.Display.drawFastHLine(x - 6, y - 4, 5, GOLD2);
+    M5Cardputer.Display.drawFastHLine(x + 6, y - 4, -5, GOLD2);
   } else {
     M5Cardputer.Display.drawCircle(x, y, 6, GOLD2);
     M5Cardputer.Display.drawFastHLine(x - 3, y, 6, GOLD2);
   }
 }
 
+void contactRightText(const char* text, int y, uint16_t color, float size = 1.0f) {
+  M5Cardputer.Display.setTextDatum(middle_right);
+  M5Cardputer.Display.setTextColor(color);
+  M5Cardputer.Display.setTextSize(size);
+  M5Cardputer.Display.drawString(text, 222, y);
+}
+
 void drawContact() {
   clear();
   header("CONTACT");
 
-  // A compact digital recreation of the physical TTG business card.
   M5Cardputer.Display.drawRoundRect(8, 30, 224, 82, 5, GOLD2);
-  M5Cardputer.Display.drawFastVLine(70, 38, 66, LINE);
-
-  crest(39, 61, 30);
+  M5Cardputer.Display.drawFastVLine(69, 38, 66, LINE);
+  crest(39, 61, 29);
 
   M5Cardputer.Display.setTextDatum(middle_left);
   M5Cardputer.Display.setTextColor(GOLD);
   M5Cardputer.Display.setTextSize(1);
-  M5Cardputer.Display.drawString(NAME, 79, 43);
+  M5Cardputer.Display.drawString(NAME, 78, 43);
 
   M5Cardputer.Display.setTextColor(GOLD2);
-  M5Cardputer.Display.drawString(TITLE, 79, 55);
-  M5Cardputer.Display.drawFastHLine(79, 63, 139, LINE);
+  M5Cardputer.Display.drawString(TITLE, 78, 55);
+  M5Cardputer.Display.drawFastHLine(78, 63, 140, LINE);
 
-  contactIcon(83, 74, 'P');
-  contactIcon(83, 87, 'M');
-  contactIcon(83, 100, 'W');
+  contactIcon(82, 74, 'P');
+  contactIcon(82, 87, 'M');
+  contactIcon(82, 100, 'W');
 
-  M5Cardputer.Display.setTextColor(WHITE);
-  M5Cardputer.Display.drawString("+91 7439008165", 94, 74);
-
-  // Long strings get a slightly smaller text size to prevent edge collisions.
-  M5Cardputer.Display.setTextSize(1);
-  M5Cardputer.Display.drawString("abdul@technosticsgroup.com", 94, 87);
-  M5Cardputer.Display.setTextColor(MUTED);
-  M5Cardputer.Display.drawString("technosticsgroup.com", 94, 100);
+  contactRightText("+91 7439008165", 74, WHITE);
+  contactRightText("abdul@technosticsgroup.com", 87, WHITE, 0.82f);
+  contactRightText("technosticsgroup.com", 100, MUTED, 0.90f);
 
   footer("ESC/X BACK");
 }
@@ -542,40 +550,41 @@ void instagramIcon(int cx, int cy) {
 void drawLinkedInPage() {
   clear();
   header("LINKEDIN");
-  linkedInIcon(60, 56);
-  linkedInIcon(180, 56);
-  M5Cardputer.Display.drawRoundRect(7, 29, 108, 76, 4, LINE);
-  M5Cardputer.Display.drawRoundRect(125, 29, 108, 76, 4, LINE);
-  M5Cardputer.Display.setTextDatum(middle_center);
-  M5Cardputer.Display.setTextColor(GOLD);
-  M5Cardputer.Display.drawString("COMPANY", 60, 84);
-  M5Cardputer.Display.setTextColor(WHITE);
-  M5Cardputer.Display.drawString("FOUNDER", 180, 84);
-  footer("C COMPANY QR   F FOUNDER QR");
+
+  M5Cardputer.Display.drawRoundRect(8, 29, 106, 76, 5, LINE);
+  M5Cardputer.Display.drawRoundRect(126, 29, 106, 76, 5, LINE);
+
+  linkedInIcon(61, 54);
+  linkedInIcon(179, 54);
+
+  centeredAt("COMPANY", 61, 82, GOLD, 1);
+  centeredAt("FOUNDER", 179, 82, WHITE, 1);
+  centeredAt("C", 61, 96, GOLD2, 1);
+  centeredAt("F", 179, 96, GOLD2, 1);
+
+  footer("C / F   SELECT PROFILE");
 }
 
 void drawInstagramPage() {
   clear();
   header("INSTAGRAM");
-  instagramIcon(60, 56);
-  instagramIcon(180, 56);
-  M5Cardputer.Display.drawRoundRect(7, 29, 108, 76, 4, LINE);
-  M5Cardputer.Display.drawRoundRect(125, 29, 108, 76, 4, LINE);
-  M5Cardputer.Display.setTextDatum(middle_center);
-  M5Cardputer.Display.setTextColor(GOLD);
-  M5Cardputer.Display.drawString("@the_technostic", 60, 84);
-  M5Cardputer.Display.setTextColor(WHITE);
-  M5Cardputer.Display.drawString("@jker24256", 180, 84);
-  centered("C = COMPANY", 84, MUTED, 1);
-  centered("F = FOUNDER", 98, MUTED, 1);
-  footer("C COMPANY QR   F FOUNDER QR");
-}
-
-void drawAbout() {
+  instagramIcon(60, 56void drawInstagramPage() {
   clear();
-  header("ABOUT");
-  crest(120, 43, 24);
-  centered(COMPANY, 68, GOLD, 1);
+  header("INSTAGRAM");
+
+  M5Cardputer.Display.drawRoundRect(8, 29, 106, 76, 5, LINE);
+  M5Cardputer.Display.drawRoundRect(126, 29, 106, 76, 5, LINE);
+
+  instagramIcon(61, 54);
+  instagramIcon(179, 54);
+
+  centeredAt("@the_technostic", 61, 82, GOLD, 0.82f);
+  centeredAt("@jker24256", 179, 82, WHITE, 0.90f);
+  centeredAt("C", 61, 96, GOLD2, 1);
+  centeredAt("F", 179, 96, GOLD2, 1);
+
+  footer("C / F   SELECT PROFILE");
+}(COMPANY, 68, GOLD, 1);
 
   // Tighter, deliberate text block so it never collides with the footer.
   M5Cardputer.Display.setTextDatum(middle_center);
