@@ -48,7 +48,7 @@ constexpr const char* CARD_PDF_URL =
 enum Screen {
   BOOT, WELCOME, MENU, QR_WEB, QR_VCARD, QR_LINKEDIN_COMPANY, QR_LINKEDIN_FOUNDER,
   QR_IG_COMPANY, QR_IG_FOUNDER, CONTACT, WEBSITE_PAGE,
-  LINKEDIN_PAGE, INSTAGRAM_PAGE, ABOUT, PHILOSOPHY, SETTINGS, EXIT
+  LINKEDIN_PAGE, INSTAGRAM_PAGE, ABOUT, PHILOSOPHY, SETTINGS, EXIT, EASTER_EGG
 };
 
 Screen screen = BOOT;
@@ -59,7 +59,9 @@ bool firstFrame = true;
 bool displayAsleep = false;
 int settingsIndex = 0;
 uint8_t brightnessValue = 180;
+String secretBuffer;
 Preferences prefs;
+unsigned long lastBootFrame = 0;
 
 // After 60 seconds with no interaction, sleep ONLY the TFT.
 // The ESP32, keyboard and application remain active so a key wakes the screen.
@@ -110,8 +112,59 @@ void wakeDisplay() {
 // Drawing helpers
 // -----------------------------------------------------------------------------
 
-void clear() {
+void technicalBackground() {
   M5Cardputer.Display.fillScreen(NAVY);
+  M5Cardputer.Display.drawFastHLine(0, 26, W, 0x0A1D);
+  M5Cardputer.Display.drawFastHLine(0, 120, W, 0x0A1D);
+
+  // Fine circuit traces — deliberately subtle.
+  const int ys[] = {31, 116};
+  for (int i = 0; i < 2; ++i) {
+    M5Cardputer.Display.drawFastHLine(12, ys[i], 48, 0x1830);
+    M5Cardputer.Display.drawFastHLine(60, ys[i], 22, 0x1830);
+    M5Cardputer.Display.drawFastVLine(60, ys[i], i == 0 ? 12 : -12, 0x1830);
+    M5Cardputer.Display.fillCircle(60, ys[i], 1, GOLD2);
+  }
+  M5Cardputer.Display.drawFastHLine(183, 31, 38, 0x1830);
+  M5Cardputer.Display.drawFastVLine(183, 31, 13, 0x1830);
+  M5Cardputer.Display.fillCircle(183, 44, 1, GOLD2);
+}
+
+void clear() {
+  technicalBackground();
+}
+
+int pageNumber() {
+  switch (screen) {
+    case MENU: return 1;
+    case CONTACT: return 2;
+    case WEBSITE_PAGE: return 3;
+    case LINKEDIN_PAGE: return 4;
+    case INSTAGRAM_PAGE: return 5;
+    case ABOUT: return 6;
+    case PHILOSOPHY: return 7;
+    case SETTINGS: return 8;
+    case EXIT: return 9;
+    default: return 0;
+  }
+}
+
+void drawBatteryStatus() {
+  int level = M5Cardputer.Power.getBatteryLevel();
+  M5Cardputer.Display.setTextDatum(middle_right);
+  M5Cardputer.Display.setTextColor(MUTED);
+  M5Cardputer.Display.setTextSize(1);
+
+  if (level < 0) {
+    M5Cardputer.Display.drawString("BAT --", W - 7, 10);
+    return;
+  }
+
+  M5Cardputer.Display.drawRect(W - 37, 6, 22, 8, MUTED);
+  M5Cardputer.Display.fillRect(W - 34, 8, max(1, (16 * level) / 100), 4,
+                               level <= 25 ? GOLD2 : GOLD);
+  M5Cardputer.Display.fillRect(W - 14, 8, 2, 4, MUTED);
+  M5Cardputer.Display.drawString(String(level) + "%", W - 42, 10);
 }
 
 void header(const char* label) {
@@ -123,6 +176,14 @@ void header(const char* label) {
   M5Cardputer.Display.drawString("TTG", 7, 10);
   M5Cardputer.Display.setTextColor(MUTED);
   M5Cardputer.Display.drawString(label, 34, 10);
+
+  const int p = pageNumber();
+  if (p > 0) {
+    M5Cardputer.Display.setTextDatum(middle_right);
+    M5Cardputer.Display.drawString(
+      String(p) + "/09", W - 52, 10);
+  }
+  drawBatteryStatus();
 }
 
 void footer(const char* text = "ESC/X BACK") {
@@ -136,22 +197,70 @@ void footer(const char* text = "ESC/X BACK") {
 // Actual TTG crest, reduced to a 48x64 1-bit bitmap for the Cardputer display.
 // Gold pixels are rendered directly on the current screen background.
 const uint64_t TTG_CREST[64] PROGMEM = {
-  0x000000000000ULL, 0x000000000000ULL, 0x000000000000ULL, 0x000000000000ULL,
-  0x000010000000ULL, 0x000018000000ULL, 0x0000DB000000ULL, 0x00007E000000ULL,
-  0x00073DE00000ULL, 0x00189BF00000ULL, 0x0030565C0000ULL, 0x004646E60000ULL,
-  0x019BC3B38000ULL, 0x0230001DE000ULL, 0x184038067F80ULL, 0x0180E6038080ULL,
-  0x0E039180F980ULL, 0x10067CE03B80ULL, 0x0019C3380B00ULL, 0x006301CE0B00ULL,
-  0x018C00738B00ULL, 0x0230001CCB00ULL, 0x02400006CB00ULL, 0x024FFFF2CB00ULL,
-  0x024FFFF6CB00ULL, 0x02483836CB00ULL, 0x02483816CB00ULL, 0x02403806CB00ULL,
-  0x0241B906CB00ULL, 0x0241B986CB00ULL, 0x0241B986CB00ULL, 0x0241B986CB00ULL,
-  0x0241B986CBC0ULL, 0x0241B986CBE0ULL, 0x0241B986CB60ULL, 0x0241B986CB40ULL,
-  0x0241B986CB00ULL, 0x0241B986C900ULL, 0x0241B986C980ULL, 0x0241B986C980ULL,
-  0x0241B986C880ULL, 0x0241B986CAC0ULL, 0x0241B986CAC0ULL, 0x0041B9860B40ULL,
-  0x1060B90E0B40ULL, 0x1038383C1AC0ULL, 0x180618F016C0ULL, 0x0C0301C03480ULL,
-  0x0600C300E980ULL, 0x01C066078700ULL, 0x10383C3E1E00ULL, 0x1E0E18F0F800ULL,
-  0x01C381C7C000ULL, 0x0070C31E0000ULL, 0x00FC667F0000ULL, 0x01032CC18000ULL,
-  0x0101B9818000ULL, 0x00009B000000ULL, 0x00029B800000ULL, 0x0003A9C00000ULL,
-  0x000125800000ULL, 0x000018000000ULL, 0x000018000000ULL, 0x000010000000ULL
+  0x000000000000ULL,
+  0x000000000000ULL,
+  0x000000000000ULL,
+  0x000001800000ULL,
+  0x000001800000ULL,
+  0x00000FF00000ULL,
+  0x000007E00000ULL,
+  0x00007BFE0000ULL,
+  0x0001CDFF8000ULL,
+  0x000327ECC000ULL,
+  0x0006FC7F7000ULL,
+  0x00199C3BBC00ULL,
+  0x07F30181EFF0ULL,
+  0x0FCE07E073F8ULL,
+  0x18381C383E18ULL,
+  0x0DE073DE0FB8ULL,
+  0x0581CE7781B0ULL,
+  0x0587381DE1B0ULL,
+  0x059CE00F79B0ULL,
+  0x05938003DDB0ULL,
+  0x05960000EDB0ULL,
+  0x0596FFFF6DB0ULL,
+  0x0596FFFF6DB0ULL,
+  0x0596C3C36DB0ULL,
+  0x0596C3C16DB0ULL,
+  0x059603C06DB0ULL,
+  0x05960BD86DB0ULL,
+  0x05960BD86DB0ULL,
+  0x05960BD86DB0ULL,
+  0x05960BD86DB0ULL,
+  0x3D960BD86DBCULL,
+  0x2D960BD86DBCULL,
+  0x25960BD86DBCULL,
+  0x05960BD86DBCULL,
+  0x05960BD86DB0ULL,
+  0x0D960BD86DB0ULL,
+  0x09960BD86DB0ULL,
+  0x09960BD86D98ULL,
+  0x19960BD86DF8ULL,
+  0x15960BD86DB8ULL,
+  0x15960BD869ACULL,
+  0x15870BD8E1ACULL,
+  0x1683C1C3C1ECULL,
+  0x12C0718F0378ULL,
+  0x1B60381C06D8ULL,
+  0x0DB80E301FB4ULL,
+  0x061F0760F9F8ULL,
+  0x03C3C3C3E7D0ULL,
+  0x00F8718F3F20ULL,
+  0x000F1C38F8C0ULL,
+  0x0007CE73E700ULL,
+  0x000FF26FF800ULL,
+  0x00183BDC1800ULL,
+  0x000809981800ULL,
+  0x00001DB80000ULL,
+  0x00003DBC0000ULL,
+  0x00003BDC0000ULL,
+  0x000003C00000ULL,
+  0x000001800000ULL,
+  0x000001800000ULL,
+  0x000000000000ULL,
+  0x000000000000ULL,
+  0x000000000000ULL,
+  0x000000000000ULL
 };
 
 void crest(int cx, int cy, int s = 28) {
@@ -267,10 +376,22 @@ void qrScreen(const char* title, const char* payload, const char* sub) {
 
 void drawBoot() {
   clear();
-  crest(W / 2, 42, 42);
+  const unsigned long elapsed = millis() - bootStarted;
+  int reveal = min(42, 8 + (int)(elapsed / 45));
+  crest(W / 2, 42, reveal);
+
   centered(COMPANY, 77, GOLD, 1);
   centered(TAGLINE, 94, MUTED, 1);
-  centered("INITIALIZING", 115, GOLD2, 1);
+
+  const char* status = elapsed < 450 ? "LOADING PROFILE" :
+                       elapsed < 900 ? "VERIFYING IDENTITY" :
+                       elapsed < 1300 ? "SYSTEM READY" : "WELCOME";
+  centered(status, 112, GOLD2, 1);
+
+  int barW = 120;
+  int progress = min(barW, (int)((elapsed * barW) / 1700));
+  M5Cardputer.Display.drawRect(60, 122, barW, 4, LINE);
+  if (progress > 0) M5Cardputer.Display.fillRect(60, 122, progress, 4, GOLD);
 }
 
 void drawWelcome() {
@@ -304,8 +425,9 @@ void drawMenu() {
   for (int i = 0; i < MENU_COUNT; ++i) {
     int y = 42 + i * 9;
     if (i == menuIndex) {
-      M5Cardputer.Display.fillRoundRect(5, y - 5, 230, 11, 2, GOLD);
-      M5Cardputer.Display.setTextColor(NAVY);
+      M5Cardputer.Display.setTextColor(GOLD);
+      M5Cardputer.Display.drawString(">", 5, y);
+      M5Cardputer.Display.drawFastHLine(17, y + 5, 208, GOLD2);
     } else {
       M5Cardputer.Display.setTextColor(MUTED);
     }
@@ -318,12 +440,24 @@ void drawMenu() {
 void drawContact() {
   clear();
   header("CONTACT DETAILS");
-  labelValue("NAME", NAME, 34);
-  labelValue("ROLE", TITLE, 50);
-  labelValue("ORG", COMPANY, 66);
-  labelValue("MAIL", EMAIL, 82);
-  labelValue("TEL", "+91 7439008165", 98);
-  centered(WEBSITE_SHORT, 113, GOLD2, 1);
+
+  M5Cardputer.Display.drawRoundRect(7, 30, 226, 82, 5, GOLD2);
+  M5Cardputer.Display.drawFastVLine(74, 39, 63, LINE);
+  crest(41, 61, 34);
+
+  M5Cardputer.Display.setTextDatum(middle_left);
+  M5Cardputer.Display.setTextColor(GOLD);
+  M5Cardputer.Display.drawString(NAME, 84, 43);
+  M5Cardputer.Display.setTextColor(GOLD2);
+  M5Cardputer.Display.drawString(TITLE, 84, 56);
+  M5Cardputer.Display.drawFastHLine(84, 65, 136, LINE);
+
+  M5Cardputer.Display.setTextColor(WHITE);
+  M5Cardputer.Display.drawString("+91 7439008165", 84, 76);
+  M5Cardputer.Display.drawString("abdul@technosticsgroup.com", 84, 88);
+  M5Cardputer.Display.setTextColor(MUTED);
+  M5Cardputer.Display.drawString("technosticsgroup.com", 84, 100);
+
   footer();
 }
 
@@ -331,13 +465,28 @@ void drawWebsite() {
   qrScreen("WEBSITE QR", WEBSITE, WEBSITE_SHORT);
 }
 
+void linkedInIcon(int cx, int cy) {
+  M5Cardputer.Display.drawRoundRect(cx - 18, cy - 18, 36, 36, 4, GOLD);
+  M5Cardputer.Display.setTextDatum(middle_center);
+  M5Cardputer.Display.setTextColor(GOLD);
+  M5Cardputer.Display.drawString("in", cx, cy);
+}
+
+void instagramIcon(int cx, int cy) {
+  M5Cardputer.Display.drawRoundRect(cx - 18, cy - 18, 36, 36, 8, GOLD);
+  M5Cardputer.Display.drawCircle(cx, cy, 8, GOLD);
+  M5Cardputer.Display.fillCircle(cx + 11, cy - 11, 2, GOLD);
+}
+
 void drawLinkedInPage() {
   clear();
   header("LINKEDIN");
+  linkedInIcon(60, 56);
+  linkedInIcon(180, 56);
   M5Cardputer.Display.drawRoundRect(7, 29, 108, 76, 4, LINE);
   M5Cardputer.Display.drawRoundRect(125, 29, 108, 76, 4, LINE);
-  centered("COMPANY", 43, GOLD, 1);
-  centered("FOUNDER", 61, WHITE, 1);
+  centered("COMPANY", 84, GOLD, 1);
+  centered("FOUNDER", 84, WHITE, 1);
   centered("C = COMPANY", 84, MUTED, 1);
   centered("F = FOUNDER", 98, MUTED, 1);
   footer("C COMPANY QR   F FOUNDER QR");
@@ -346,10 +495,12 @@ void drawLinkedInPage() {
 void drawInstagramPage() {
   clear();
   header("INSTAGRAM");
+  instagramIcon(60, 56);
+  instagramIcon(180, 56);
   M5Cardputer.Display.drawRoundRect(7, 29, 108, 76, 4, LINE);
   M5Cardputer.Display.drawRoundRect(125, 29, 108, 76, 4, LINE);
-  centered("@the_technostic", 43, GOLD, 1);
-  centered("@jker24256", 61, WHITE, 1);
+  centered("@the_technostic", 84, GOLD, 1);
+  centered("@jker24256", 84, WHITE, 1);
   centered("C = COMPANY", 84, MUTED, 1);
   centered("F = FOUNDER", 98, MUTED, 1);
   footer("C COMPANY QR   F FOUNDER QR");
@@ -416,6 +567,16 @@ void drawSettings() {
   footer("LEFT/RIGHT ADJUST   ESC/X BACK");
 }
 
+void drawEasterEgg() {
+  clear();
+  header("TTG // CLASSIFIED");
+  crest(120, 48, 42);
+  centered("PRAEMONITUS", 80, GOLD, 1);
+  centered("PRAEMUNITUS", 94, WHITE, 1);
+  centered("EST. 2025  //  SYSTEM NOMINAL", 109, MUTED, 1);
+  footer("ESC/X BACK");
+}
+
 void drawExit() {
   clear();
   crest(120, 42, 34);
@@ -443,6 +604,34 @@ void render() {
     case PHILOSOPHY: drawPhilosophy(); break;
     case SETTINGS: drawSettings(); break;
     case EXIT: drawExit(); break;
+    case EASTER_EGG: drawEasterEgg(); break;
+  }
+
+  // Short horizontal scan transition on normal UI screens.
+  const bool qr = (screen == QR_WEB || screen == QR_VCARD ||
+                   screen == QR_LINKEDIN_COMPANY || screen == QR_LINKEDIN_FOUNDER ||
+                   screen == QR_IG_COMPANY || screen == QR_IG_FOUNDER);
+  if (!qr && screen != BOOT) {
+    for (int x = 0; x < W; x += 40) {
+      M5Cardputer.Display.fillRect(x, 0, 20, H, NAVY2);
+      delay(7);
+      M5Cardputer.Display.fillRect(x, 0, 20, H, NAVY);
+    }
+    // Redraw clean frame after the sweep.
+    switch (screen) {
+      case WELCOME: drawWelcome(); break;
+      case MENU: drawMenu(); break;
+      case CONTACT: drawContact(); break;
+      case WEBSITE_PAGE: drawWebsite(); break;
+      case LINKEDIN_PAGE: drawLinkedInPage(); break;
+      case INSTAGRAM_PAGE: drawInstagramPage(); break;
+      case ABOUT: drawAbout(); break;
+      case PHILOSOPHY: drawPhilosophy(); break;
+      case SETTINGS: drawSettings(); break;
+      case EXIT: drawExit(); break;
+      case EASTER_EGG: drawEasterEgg(); break;
+      default: break;
+    }
   }
   firstFrame = false;
 }
@@ -465,7 +654,7 @@ void back() {
   M5Cardputer.Display.setBrightness(brightnessValue);
   if (screen == MENU || screen == WELCOME) {
     screen = WELCOME;
-  } else if (screen == EXIT) {
+  } else if (screen == EXIT || screen == EASTER_EGG) {
     screen = MENU;
   } else {
     screen = MENU;
@@ -577,6 +766,19 @@ void handleKeys() {
       }
     }
 
+    if (isalpha((unsigned char)c)) {
+      secretBuffer += (char)tolower((unsigned char)c);
+      if (secretBuffer.length() > 3) {
+        secretBuffer.remove(0, secretBuffer.length() - 3);
+      }
+      if (secretBuffer == "ttg") {
+        screen = EASTER_EGG;
+        secretBuffer = "";
+        render();
+        return;
+      }
+    }
+
     directKey(c);
     return;
   }
@@ -608,6 +810,9 @@ void loop() {
     if (millis() - TTG::bootStarted > 1800) {
       TTG::screen = TTG::WELCOME;
       TTG::resetIdleTimer();
+      TTG::render();
+    } else if (millis() - TTG::lastBootFrame > 70) {
+      TTG::lastBootFrame = millis();
       TTG::render();
     }
   } else {
