@@ -89,25 +89,71 @@ void wakeDisplayOnly() {
   displayAsleep = false;
   resetIdleTimer();
   render();
+  startMusic();
 }
 
 void enterDisplaySleep() {
-  // Sleep ONLY the TFT. The ESP32, keyboard, speaker and application remain
-  // running, so a keyboard press can wake the display immediately.
+  // Sleep ONLY the TFT. The ESP32 and keyboard remain active.
+  // Stop audio while the screen is asleep to save battery and restart on wake.
+  stopMusic();
   M5Cardputer.Display.sleep();
   displayAsleep = true;
 }
 
-// Original, short TTG phonk-style instrumental motif.
-// It is synthesized locally with the Cardputer speaker; no copyrighted audio
-// file is embedded.
-void playPhonkIntro() {
-  const uint16_t notes[] = {110, 110, 147, 131, 98, 110, 165, 147};
-  const uint16_t lengths[] = {180, 100, 160, 140, 220, 120, 160, 300};
-  for (size_t i = 0; i < 8; ++i) {
-    M5Cardputer.Speaker.tone(notes[i], lengths[i]);
-    delay(lengths[i] + 12);
+// Continuous original TTG phonk-inspired synth loop.
+// Uses M5Unified's virtual speaker channels so the ESP32 can keep the UI
+// responsive while bass, percussion and lead tones are scheduled independently.
+bool musicEnabled = true;
+unsigned long musicNextStep = 0;
+uint8_t musicStep = 0;
+
+const uint16_t musicBass[16] = {
+  55, 55, 65, 55, 73, 65, 55, 49,
+  55, 55, 65, 55, 82, 73, 65, 49
+};
+
+void stopMusic() {
+  musicEnabled = false;
+  M5Cardputer.Speaker.stop();
+}
+
+void startMusic() {
+  if (volumeValue == 0) return;
+  musicEnabled = true;
+  musicStep = 0;
+  musicNextStep = 0;
+}
+
+void musicTick() {
+  if (!musicEnabled || displayAsleep) return;
+
+  const unsigned long now = millis();
+  if (now < musicNextStep) return;
+
+  // 16-step, ~128 BPM groove: kick/bass + sparse lead + hats.
+  const uint16_t bass = musicBass[musicStep];
+  M5Cardputer.Speaker.tone(bass, 105, 0, true);
+
+  if ((musicStep % 4) == 0 || musicStep == 6 || musicStep == 14) {
+    M5Cardputer.Speaker.tone(72, 42, 1, true);   // kick
   }
+
+  if ((musicStep % 4) == 2) {
+    M5Cardputer.Speaker.tone(1800, 34, 2, true); // snare
+  }
+
+  if ((musicStep & 1) == 0) {
+    M5Cardputer.Speaker.tone(6200, 12, 3, true); // hi-hat tick
+  }
+
+  // Sparse minor pentatonic lead for a less "beepy" feel.
+  static const uint16_t lead[] = {220, 261, 293, 330, 293, 261, 220, 196};
+  if (musicStep == 3 || musicStep == 7 || musicStep == 11 || musicStep == 15) {
+    M5Cardputer.Speaker.tone(lead[(musicStep / 2) & 7], 70, 4, true);
+  }
+
+  musicStep = (musicStep + 1) & 15;
+  musicNextStep = now + 125;
 }
 
 // -----------------------------------------------------------------------------
@@ -249,7 +295,9 @@ bool drawQR(const char* payload, int version = 5, uint8_t ecc = ECC_MEDIUM) {
 void qrScreen(const char* title, const char* payload, const char* sub) {
   (void)title;
   (void)sub;
-  // Dedicated full-screen scan mode. ESC/X returns to the menu.
+  // Lower the backlight in scan mode to prevent camera auto-exposure from
+  // washing out the white QR field while keeping the black modules crisp.
+  M5Cardputer.Display.setBrightness(min<uint8_t>(brightnessValue, 120));
   drawQR(payload, 5, ECC_MEDIUM);
 }
 
@@ -450,6 +498,7 @@ void selectMenu() {
 }
 
 void back() {
+  M5Cardputer.Display.setBrightness(brightnessValue);
   if (screen == MENU || screen == WELCOME) {
     screen = WELCOME;
   } else if (screen == EXIT) {
@@ -604,7 +653,7 @@ void setup() {
   TTG::bootStarted = millis();
   TTG::lastActivity = millis();
   TTG::render();
-  TTG::playPhonkIntro();
+  TTG::startMusic();
   TTG::resetIdleTimer();
 }
 
@@ -619,6 +668,7 @@ void loop() {
     }
   } else {
     TTG::handleKeys();
+    TTG::musicTick();
 
     if (!TTG::displayAsleep &&
         millis() - TTG::lastActivity >= TTG::SLEEP_TIMEOUT_MS) {
