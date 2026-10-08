@@ -162,9 +162,10 @@ void crest(int cx, int cy, int s = 28) {
 
   for (int y = 0; y < targetH; ++y) {
     const int srcY = (y * 64) / targetH;
-    const uint64_t row = pgm_read_dword(&TTG_CREST[srcY]);
-    const uint64_t rowHi = pgm_read_dword(&TTG_CREST[srcY] + 1);
-    const uint64_t bits = row | (rowHi << 32);
+    const uint32_t low = pgm_read_dword(reinterpret_cast<const uint32_t*>(&TTG_CREST[srcY]));
+    const uint32_t high = pgm_read_dword(reinterpret_cast<const uint32_t*>(&TTG_CREST[srcY]) + 1);
+    const uint64_t bits = static_cast<uint64_t>(low) |
+                          (static_cast<uint64_t>(high) << 32);
 
     for (int x = 0; x < targetW; ++x) {
       const int srcX = (x * 48) / targetW;
