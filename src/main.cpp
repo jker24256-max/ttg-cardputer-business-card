@@ -525,23 +525,19 @@ void drawContact() {
   M5Cardputer.Display.drawString(TITLE, 78, 55);
   M5Cardputer.Display.drawFastHLine(78, 63, 140, LINE);
 
-  contactIcon(82, 74, 'P');
-  contactIcon(82, 87, 'M');
-  contactIcon(82, 100, 'W');
-
-  // Left-align the details so the long email remains readable on the
-  // 240px panel instead of being squeezed against the right edge.
+  // No contact icons: the freed horizontal space is dedicated to
+  // larger, cleaner typography for the actual contact information.
   M5Cardputer.Display.setTextDatum(middle_left);
   M5Cardputer.Display.setTextColor(WHITE);
-  M5Cardputer.Display.setTextSize(0.95f);
-  M5Cardputer.Display.drawString("+91 7439008165", 94, 74);
+  M5Cardputer.Display.setTextSize(1.05f);
+  M5Cardputer.Display.drawString("+91 7439008165", 78, 74);
 
-  M5Cardputer.Display.setTextSize(0.78f);
-  M5Cardputer.Display.drawString("abdul@technosticsgroup.com", 94, 87);
+  M5Cardputer.Display.setTextSize(0.92f);
+  M5Cardputer.Display.drawString("abdul@technosticsgroup.com", 78, 87);
 
   M5Cardputer.Display.setTextColor(GOLD2);
-  M5Cardputer.Display.setTextSize(0.90f);
-  M5Cardputer.Display.drawString("technosticsgroup.com", 94, 100);
+  M5Cardputer.Display.setTextSize(1.00f);
+  M5Cardputer.Display.drawString("technosticsgroup.com", 78, 100);
 
   footer("ESC/X BACK");
 }
