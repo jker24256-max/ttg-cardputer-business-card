@@ -133,22 +133,47 @@ void footer(const char* text = "ESC/X BACK") {
   M5Cardputer.Display.drawString(text, W / 2, 129);
 }
 
-void crest(int cx, int cy, int s = 28) {
-  // Compact heraldic TT mark. Kept vector-based so the firmware has no
-  // external image asset and remains fully offline.
-  int r = s / 2;
-  M5Cardputer.Display.drawRect(cx - r, cy - r, s, s, GOLD);
-  M5Cardputer.Display.drawRect(cx - r + 3, cy - r + 3, s - 6, s - 6, GOLD2);
-  M5Cardputer.Display.drawLine(cx - r + 6, cy - r + 7, cx, cy + r - 5, GOLD);
-  M5Cardputer.Display.drawLine(cx + r - 6, cy - r + 7, cx, cy + r - 5, GOLD);
-  M5Cardputer.Display.drawFastVLine(cx, cy - r + 7, s - 12, GOLD);
-  M5Cardputer.Display.drawFastHLine(cx - r + 7, cy, s - 14, GOLD);
-  M5Cardputer.Display.setTextDatum(middle_center);
-  M5Cardputer.Display.setTextColor(GOLD);
-  M5Cardputer.Display.setTextSize(1);
-  M5Cardputer.Display.drawString("T", cx, cy + 1);
-}
+// Actual TTG crest, reduced to a 48x64 1-bit bitmap for the Cardputer display.
+// Gold pixels are rendered directly on the current screen background.
+const uint64_t TTG_CREST[64] PROGMEM = {
+  0x000000000000ULL, 0x000000000000ULL, 0x000000000000ULL, 0x000000000000ULL,
+  0x000010000000ULL, 0x000018000000ULL, 0x0000DB000000ULL, 0x00007E000000ULL,
+  0x00073DE00000ULL, 0x00189BF00000ULL, 0x0030565C0000ULL, 0x004646E60000ULL,
+  0x019BC3B38000ULL, 0x0230001DE000ULL, 0x184038067F80ULL, 0x0180E6038080ULL,
+  0x0E039180F980ULL, 0x10067CE03B80ULL, 0x0019C3380B00ULL, 0x006301CE0B00ULL,
+  0x018C00738B00ULL, 0x0230001CCB00ULL, 0x02400006CB00ULL, 0x024FFFF2CB00ULL,
+  0x024FFFF6CB00ULL, 0x02483836CB00ULL, 0x02483816CB00ULL, 0x02403806CB00ULL,
+  0x0241B906CB00ULL, 0x0241B986CB00ULL, 0x0241B986CB00ULL, 0x0241B986CB00ULL,
+  0x0241B986CBC0ULL, 0x0241B986CBE0ULL, 0x0241B986CB60ULL, 0x0241B986CB40ULL,
+  0x0241B986CB00ULL, 0x0241B986C900ULL, 0x0241B986C980ULL, 0x0241B986C980ULL,
+  0x0241B986C880ULL, 0x0241B986CAC0ULL, 0x0241B986CAC0ULL, 0x0041B9860B40ULL,
+  0x1060B90E0B40ULL, 0x1038383C1AC0ULL, 0x180618F016C0ULL, 0x0C0301C03480ULL,
+  0x0600C300E980ULL, 0x01C066078700ULL, 0x10383C3E1E00ULL, 0x1E0E18F0F800ULL,
+  0x01C381C7C000ULL, 0x0070C31E0000ULL, 0x00FC667F0000ULL, 0x01032CC18000ULL,
+  0x0101B9818000ULL, 0x00009B000000ULL, 0x00029B800000ULL, 0x0003A9C00000ULL,
+  0x000125800000ULL, 0x000018000000ULL, 0x000018000000ULL, 0x000010000000ULL
+};
 
+void crest(int cx, int cy, int s = 28) {
+  const int targetW = s;
+  const int targetH = (s * 64) / 48;
+  const int x0 = cx - targetW / 2;
+  const int y0 = cy - targetH / 2;
+
+  for (int y = 0; y < targetH; ++y) {
+    const int srcY = (y * 64) / targetH;
+    const uint64_t row = pgm_read_dword(&TTG_CREST[srcY]);
+    const uint64_t rowHi = pgm_read_dword(&TTG_CREST[srcY] + 1);
+    const uint64_t bits = row | (rowHi << 32);
+
+    for (int x = 0; x < targetW; ++x) {
+      const int srcX = (x * 48) / targetW;
+      if (bits & (1ULL << srcX)) {
+        M5Cardputer.Display.drawPixel(x0 + x, y0 + y, GOLD);
+      }
+    }
+  }
+}
 void centered(const String& text, int y, uint16_t color = WHITE, int size = 1) {
   M5Cardputer.Display.setTextDatum(middle_center);
   M5Cardputer.Display.setTextColor(color);
@@ -586,7 +611,6 @@ void loop() {
     }
   } else {
     TTG::handleKeys();
-    TTG::musicTick();
 
     if (!TTG::displayAsleep &&
         millis() - TTG::lastActivity >= TTG::SLEEP_TIMEOUT_MS) {
