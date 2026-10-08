@@ -521,8 +521,6 @@ void drawLinkedInPage() {
   M5Cardputer.Display.drawString("COMPANY", 60, 84);
   M5Cardputer.Display.setTextColor(WHITE);
   M5Cardputer.Display.drawString("FOUNDER", 180, 84);
-  centered("C = COMPANY", 84, MUTED, 1);
-  centered("F = FOUNDER", 98, MUTED, 1);
   footer("C COMPANY QR   F FOUNDER QR");
 }
 
