@@ -559,40 +559,43 @@ void instagramIcon(int cx, int cy) {
   M5Cardputer.Display.fillCircle(cx + 11, cy - 11, 2, GOLD);
 }
 
-void drawLinkedInPage() {
+// Matched social-profile selector. Keep both screens deliberately
+// identical in geometry: the icon identifies the service, the label
+// identifies the destination owner, and the footer provides the action.
+void drawSocialSelector(const char* section, bool instagram) {
   clear();
-  header("LINKEDIN");
+  header(section);
 
-  M5Cardputer.Display.drawRoundRect(8, 29, 106, 76, 5, LINE);
-  M5Cardputer.Display.drawRoundRect(126, 29, 106, 76, 5, LINE);
+  // Two balanced cards with generous breathing room for the 240x135 panel.
+  M5Cardputer.Display.drawRoundRect(8, 29, 106, 78, 6, LINE);
+  M5Cardputer.Display.drawRoundRect(126, 29, 106, 78, 6, LINE);
 
-  linkedInIcon(61, 54);
-  linkedInIcon(179, 54);
+  if (instagram) {
+    instagramIcon(61, 53);
+    instagramIcon(179, 53);
+  } else {
+    linkedInIcon(61, 53);
+    linkedInIcon(179, 53);
+  }
 
-  centeredAt("COMPANY", 61, 82, GOLD, 1);
-  centeredAt("FOUNDER", 179, 82, WHITE, 1);
-  centeredAt("C", 61, 96, GOLD2, 1);
-  centeredAt("F", 179, 96, GOLD2, 1);
+  // Keep destination details off the selector. The QR screen is the
+  // destination surface and carries the actual profile URL.
+  centeredAt("COMPANY", 61, 81, GOLD, 1.0f);
+  centeredAt("FOUNDER", 179, 81, WHITE, 1.0f);
+
+  // Interaction keys are visually subordinate to the identity labels.
+  centeredAt("C", 61, 97, GOLD2, 1.0f);
+  centeredAt("F", 179, 97, GOLD2, 1.0f);
 
   footer("C / F   SELECT PROFILE");
 }
 
+void drawLinkedInPage() {
+  drawSocialSelector("LINKEDIN", false);
+}
+
 void drawInstagramPage() {
-  clear();
-  header("INSTAGRAM");
-
-  M5Cardputer.Display.drawRoundRect(8, 29, 106, 76, 5, LINE);
-  M5Cardputer.Display.drawRoundRect(126, 29, 106, 76, 5, LINE);
-
-  instagramIcon(61, 54);
-  instagramIcon(179, 54);
-
-  centeredAt("@the_technostic", 61, 82, GOLD, 0.82f);
-  centeredAt("@jker24256", 179, 82, WHITE, 0.90f);
-  centeredAt("C", 61, 96, GOLD2, 1);
-  centeredAt("F", 179, 96, GOLD2, 1);
-
-  footer("C / F   SELECT PROFILE");
+  drawSocialSelector("INSTAGRAM", true);
 }
 
 void drawAbout() {
