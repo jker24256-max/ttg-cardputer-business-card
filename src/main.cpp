@@ -59,7 +59,6 @@ bool firstFrame = true;
 bool displayAsleep = false;
 int settingsIndex = 0;
 uint8_t brightnessValue = 180;
-constexpr uint8_t MUSIC_VOLUME = 96;
 Preferences prefs;
 
 // After 60 seconds with no interaction, sleep ONLY the TFT.
@@ -71,13 +70,9 @@ constexpr unsigned long SLEEP_TIMEOUT_MS = 60000;
 // -----------------------------------------------------------------------------
 void render();
 void resetIdleTimer();
-void startMusic();
-void stopMusic();
 
 void applySettings() {
   M5Cardputer.Display.setBrightness(brightnessValue);
-  // Music volume is fixed; there is intentionally no user volume setting.
-  M5Cardputer.Speaker.setVolume(MUSIC_VOLUME);
 }
 
 void saveSettings() {
@@ -91,70 +86,12 @@ void wakeDisplayOnly() {
   displayAsleep = false;
   resetIdleTimer();
   render();
-  startMusic();
 }
 
 void enterDisplaySleep() {
   // Sleep ONLY the TFT. The ESP32 and keyboard remain active.
-  // Stop audio while the screen is asleep to save battery and restart on wake.
-  stopMusic();
   M5Cardputer.Display.sleep();
   displayAsleep = true;
-}
-
-// Continuous original TTG phonk-inspired synth loop.
-// Uses M5Unified's virtual speaker channels so the ESP32 can keep the UI
-// responsive while bass, percussion and lead tones are scheduled independently.
-bool musicEnabled = true;
-unsigned long musicNextStep = 0;
-uint8_t musicStep = 0;
-
-const uint16_t musicBass[16] = {
-  55, 55, 65, 55, 73, 65, 55, 49,
-  55, 55, 65, 55, 82, 73, 65, 49
-};
-
-void stopMusic() {
-  musicEnabled = false;
-  M5Cardputer.Speaker.stop();
-}
-
-void startMusic() {
-  musicEnabled = true;
-  musicStep = 0;
-  musicNextStep = 0;
-}
-
-void musicTick() {
-  if (!musicEnabled || displayAsleep) return;
-
-  const unsigned long now = millis();
-  if (now < musicNextStep) return;
-
-  // 16-step, ~128 BPM groove: kick/bass + sparse lead + hats.
-  const uint16_t bass = musicBass[musicStep];
-  M5Cardputer.Speaker.tone(bass, 105, 0, true);
-
-  if ((musicStep % 4) == 0 || musicStep == 6 || musicStep == 14) {
-    M5Cardputer.Speaker.tone(72, 42, 1, true);   // kick
-  }
-
-  if ((musicStep % 4) == 2) {
-    M5Cardputer.Speaker.tone(1800, 34, 2, true); // snare
-  }
-
-  if ((musicStep & 1) == 0) {
-    M5Cardputer.Speaker.tone(6200, 12, 3, true); // hi-hat tick
-  }
-
-  // Sparse minor pentatonic lead for a less "beepy" feel.
-  static const uint16_t lead[] = {220, 261, 293, 330, 293, 261, 220, 196};
-  if (musicStep == 3 || musicStep == 7 || musicStep == 11 || musicStep == 15) {
-    M5Cardputer.Speaker.tone(lead[(musicStep / 2) & 7], 70, 4, true);
-  }
-
-  musicStep = (musicStep + 1) & 15;
-  musicNextStep = now + 125;
 }
 
 // -----------------------------------------------------------------------------
@@ -635,7 +572,6 @@ void setup() {
   TTG::bootStarted = millis();
   TTG::lastActivity = millis();
   TTG::render();
-  TTG::startMusic();
   TTG::resetIdleTimer();
 }
 
