@@ -342,7 +342,7 @@ void wrapText(const String& text, int x, int y, int maxWidth, int lineHeight = 1
 // QR
 // -----------------------------------------------------------------------------
 
-bool drawQR(const char* payload, int preferredVersion = 4, uint8_t ecc = ECC_LOW) {
+bool drawQR(const char* payload, int preferredVersion = 4, uint8_t ecc = ECC_LOW, int minVersion = 3) {
   QRCode qr;
   // Keep one fixed buffer large enough for our supported scan versions.
   // This lets us try a smaller QR first and fall back if the payload needs it.
@@ -353,7 +353,7 @@ bool drawQR(const char* payload, int preferredVersion = 4, uint8_t ecc = ECC_LOW
 
   // Prefer the smallest practical symbol. Smaller versions mean fewer
   // modules, which gives the Cardputer camera target more usable detail.
-  for (int version = 3; version <= MAX_QR_VERSION; ++version) {
+  for (int version = minVersion; version <= MAX_QR_VERSION; ++version) {
     if (version > preferredVersion && selectedVersion != 0) break;
     if (qrcode_initText(&qr, data, version, ecc, payload) == 0) {
       selectedVersion = version;
@@ -401,15 +401,13 @@ bool drawQR(const char* payload, int preferredVersion = 4, uint8_t ecc = ECC_LOW
 // Screens
 // -----------------------------------------------------------------------------
 
-void qrScreen(const char* title, const char* payload, const char* sub) {
+void qrScreen(const char* title, const char* payload, const char* sub, int minVersion = 3) {
   (void)title;
   (void)sub;
-  // Lower the backlight in scan mode to prevent camera auto-exposure from
-  // washing out the white QR field while keeping the black modules crisp.
   // QR scan mode needs maximum optical contrast at normal phone distance.
   // Restore the user's normal brightness when leaving the QR screen.
   M5Cardputer.Display.setBrightness(255);
-  drawQR(payload, 4, ECC_LOW);
+  drawQR(payload, 5, ECC_LOW, minVersion);
 }
 
 void drawBoot() {
@@ -710,9 +708,9 @@ void drawCurrentScreen() {
     case WELCOME: drawWelcome(); break;
     case MENU: drawMenu(); break;
     case QR_WEB: qrScreen("WEBSITE QR", WEBSITE, WEBSITE_SHORT); break;
-    case QR_VCARD: qrScreen("BUSINESS CARD PDF", CARD_PDF_URL, "SCAN TO OPEN PDF"); break;
+    case QR_VCARD: qrScreen("BUSINESS CARD PDF", CARD_PDF_URL, "SCAN TO OPEN PDF", 5); break;
     case QR_LINKEDIN_COMPANY: qrScreen("COMPANY LINKEDIN", LINKEDIN_COMPANY, "The Technostic Group"); break;
-    case QR_LINKEDIN_FOUNDER: qrScreen("FOUNDER LINKEDIN", LINKEDIN_FOUNDER, "Abdul Muhaymin Nawaz"); break;
+    case QR_LINKEDIN_FOUNDER: qrScreen("FOUNDER LINKEDIN", LINKEDIN_FOUNDER, "Abdul Muhaymin Nawaz", 5); break;
     case QR_IG_COMPANY: qrScreen("COMPANY INSTAGRAM", IG_COMPANY, "@the_technostic"); break;
     case QR_IG_FOUNDER: qrScreen("FOUNDER INSTAGRAM", IG_FOUNDER, "@jker24256"); break;
     case CONTACT: drawContact(); break;
