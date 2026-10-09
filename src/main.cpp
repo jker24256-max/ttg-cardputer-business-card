@@ -557,13 +557,12 @@ void drawContact() {
   M5Cardputer.Display.setTextSize(1.05f);
   M5Cardputer.Display.drawString("+91 7439008165", 78, 74);
 
-  // Keep the full email legible while fitting the available width.
-  M5Cardputer.Display.setTextSize(0.95f);
-  M5Cardputer.Display.drawString(EMAIL, 78, 87);
-
-  M5Cardputer.Display.setTextColor(GOLD2);
-  M5Cardputer.Display.setTextSize(1.00f);
-  M5Cardputer.Display.drawString("technosticsgroup.com", 78, 100);
+  // Avoid fractional text scaling for the email: split it into two
+  // readable lines using the native font. The domain also serves as the
+  // website address, so it does not need to be printed a second time.
+  M5Cardputer.Display.setTextSize(1);
+  M5Cardputer.Display.drawString("abdul@", 78, 85);
+  M5Cardputer.Display.drawString("technosticsgroup.com", 78, 98);
 
   footer("ESC/X BACK");
 }
