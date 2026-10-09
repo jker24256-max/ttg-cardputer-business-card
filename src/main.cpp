@@ -794,6 +794,22 @@ void handleKeys() {
     return;
   }
 
+  // Make Settings escapable through both the dedicated ESC key and Enter,
+  // in addition to X (handled globally below). This gives a reliable
+  // keyboard exit even when the user is adjusting brightness.
+  if (screen == SETTINGS && st.enter) {
+    back();
+    return;
+  }
+
+  // Handle X before screen-specific navigation so it always exits a page.
+  for (char c : st.word) {
+    if (c == 'x' || c == 'X') {
+      back();
+      return;
+    }
+  }
+
   if (screen == WELCOME && st.enter) {
     screen = MENU;
     render();
@@ -832,11 +848,6 @@ void handleKeys() {
   }
 
   for (char c : st.word) {
-    if (c == 'x' || c == 'X') {
-      back();
-      return;
-    }
-
     if (screen == LINKEDIN_PAGE) {
       if (c == 'c' || c == 'C') {
         screen = QR_LINKEDIN_COMPANY;
