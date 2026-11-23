@@ -920,7 +920,9 @@ void handleKeys() {
 void setup() {
   auto cfg = M5.config();
   M5Cardputer.begin(cfg, true);
-  M5Cardputer.Display.setRotation(1);
+  // Cardputer-Adv landscape orientation for the current M5Unified/M5GFX stack.
+  // Rotation 1 is portrait on the installed display stack.
+  M5Cardputer.Display.setRotation(0);
   M5Cardputer.Display.setTextFont(1);
   M5Cardputer.Display.setTextSize(1);
 
