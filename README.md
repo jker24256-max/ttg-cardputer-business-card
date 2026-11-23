@@ -10,6 +10,7 @@ Premium offline digital business card firmware for the **M5Stack Cardputer-Adv**
 - business-card PDF QR for saving Abdul Muhaymin Nawaz's contact
 - Company + personal LinkedIn QR codes
 - Company + founder Instagram QR codes
+- Founder-only GitHub QR page
 - Contact and company information
 - Keyboard-first navigation
 - Full four-way arrow-key menu navigation
@@ -29,8 +30,9 @@ Email: abdul@technosticsgroup.com
 Phone: +91 7439008165  
 Company LinkedIn: https://www.linkedin.com/in/technostics-group  
 Personal LinkedIn: https://www.linkedin.com/in/abdul-muhaymin-nawaz-6a3a043b3  
-Company Instagram: https://instagram.com/the_technostic  
+Company Instagram: https://www.instagram.com/thetechnostics/
 Founder Instagram: https://instagram.com/jker24256
+Personal GitHub: https://github.com/jker24256-max
 
 ## Controls
 
@@ -42,6 +44,7 @@ Founder Instagram: https://instagram.com/jker24256
 | W | Website |
 | L | LinkedIn (company/founder) |
 | I | Instagram |
+| G | Personal GitHub |
 | A | About |
 | P | Philosophy |
 | E | Exit |
