@@ -472,16 +472,16 @@ void drawWelcome() {
 }
 
 const char* menuItems[] = {
-  "BUSINESS CARD  PDF",
-  "CONTACT        DETAILS",
-  "WEBSITE        OPEN",
-  "LINKEDIN       PROFILE",
-  "INSTAGRAM      SOCIAL",
-  "GITHUB         PERSONAL",
-  "ABOUT          COMPANY",
-  "PHILOSOPHY     MOTTO",
-  "SETTINGS       DISPLAY",
-  "EXIT           CLOSE"
+  "BUSINESS CARD",
+  "CONTACT",
+  "WEBSITE",
+  "LINKEDIN",
+  "INSTAGRAM",
+  "GITHUB",
+  "ABOUT",
+  "PHILOSOPHY",
+  "SETTINGS",
+  "EXIT"
 };
 constexpr int MENU_COUNT = sizeof(menuItems) / sizeof(menuItems[0]);
 
@@ -490,17 +490,20 @@ void drawMenu() {
   header("DIGITAL BUSINESS CARD");
   centered(NAME, 28, WHITE, 1);
 
+  M5Cardputer.Display.setTextSize(1);
   for (int i = 0; i < MENU_COUNT; ++i) {
-    int y = 39 + i * 8;
+    const int column = i / 5;
+    const int row = i % 5;
+    const int x = column == 0 ? 8 : 126;
+    const int y = 42 + row * 14;
     if (i == menuIndex) {
       M5Cardputer.Display.setTextColor(GOLD);
-      M5Cardputer.Display.drawString(">", 5, y);
-      M5Cardputer.Display.drawFastHLine(17, y + 5, 208, GOLD2);
+      M5Cardputer.Display.drawRoundRect(x - 4, y - 7, 106, 13, 2, GOLD2);
     } else {
       M5Cardputer.Display.setTextColor(MUTED);
     }
     M5Cardputer.Display.setTextDatum(middle_left);
-    M5Cardputer.Display.drawString(String(i + 1) + "  " + menuItems[i], 9, y);
+    M5Cardputer.Display.drawString(String(i + 1) + "  " + menuItems[i], x, y);
   }
   footer("ARROWS MOVE   ENTER SELECT");
 }
